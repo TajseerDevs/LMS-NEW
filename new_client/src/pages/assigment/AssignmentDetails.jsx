@@ -1,67 +1,123 @@
 import React from 'react'
 import { FaArrowLeft } from "react-icons/fa6";
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import YellowBtn from '../../components/YellowBtn';
+import { useGetAssignmentDetailsQuery } from '../../store/apis/assigmentApis';
+import { useSelector } from 'react-redux';
+import formatDate from '../../utils/formatDate';
+import { daysUntilDueDate } from '../../utils/daysUntilDueDate';
 
 
 
 const AssignmentDetails = () => {
 
+    const baseUrl = `http://localhost:5500`
+
+    const {token} = useSelector((state) => state.user)
+
+    const {assignmentId , courseId} = useParams()
     const navigate = useNavigate()
 
-  return (
-    <div className='p-2'>
+    const {data : assignment , isLoading} = useGetAssignmentDetailsQuery({token , assignmentId})
 
-        <div className='bg-white h-[80px] ml-1 flex items-center gap-8 p-6 w-full'>
-            <button onClick={() => navigate(`/course/main-page/67ada2dbb22c8ec372e03ec2`)} className='flex text-[#FFC200] font-semibold text-xl items-center gap-2'><FaArrowLeft className='mt-1' size={22}/> Back</button>
-            <span className='text-[#403685] font-semibold text-xl'>Science course</span>
-        </div>
 
-        <div className='p-10 mt-8'>
+    const downloadFile = (filePath) => {
+        const filename = filePath.replace("/uploads/", "")
+    
+        const downloadUrl = `${baseUrl}/download/${encodeURIComponent(filename)}`
+    
+        const link = document.createElement("a")
+        link.href = downloadUrl;
+        link.setAttribute("download", "")
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+    }
 
-            <h2 className='text-[#002147] text-2xl font-semibold'>Assignment Name</h2>
+  
+    if(isLoading){
+        return <h1>Loading ...</h1>
+    }
 
-            <hr className='mt-6' />
 
-            <div className='mt-6 flex items-center justify-between'>
 
-                <div className='flex items-center text-lg gap-10'>
-
-                    <span className='text-[#6E6E71] font-semibold'>Due Date : <span className='text-[#002147] font-semibold'>March 15 2025</span> </span>
-                    
-                    <span className='text-[#6E6E71] font-semibold'>Time Remaining : <span className='text-[#002147] font-semibold'>13 days</span> </span>
-
+    return (
+        <>
+            <div className='p-2'>
+    
+                <div className='bg-white h-[80px] ml-1 flex items-center gap-8 p-6 w-full'>
+                    <button onClick={() => navigate(`/course/main-page/${courseId}`)} className='flex text-[#FFC200] font-semibold text-xl items-center gap-2'><FaArrowLeft className='mt-1' size={22}/> Back</button>
+                    <span className='text-[#403685] font-semibold text-xl'>{assignment?.course?.title}</span>
                 </div>
+    
+                <div className='p-10 mt-8'>
+    
+                    <h2 className='text-[#002147] text-2xl capitalize font-semibold'>{assignment?.title}</h2>
+    
+                    <hr className='mt-6' />
+    
+                    <div className='mt-6 flex items-center justify-between'>
+    
+                        <div className='flex items-center text-lg gap-10'>
+    
+                            <span className='text-[#6E6E71] font-semibold'>Due Date : <span className='text-[#002147] font-semibold'>{formatDate(assignment?.dueDate)}</span> </span>
+                            
+                            <span className='text-[#6E6E71] font-semibold'>Time Remaining : <span className='text-[#002147] font-semibold'>{daysUntilDueDate(assignment?.dueDate)} Days Left</span> </span>
+    
+                        </div>
+    
+                        <span className='text-[#6E6E71] font-semibold text-lg'>Assignment Grade : <span className='text-[#002147] font-semibold'>{assignment?.mark}</span> </span>
+    
+                    </div>
+    
+                    <hr className='mt-6' />
+    
+                    <div className='mt-6'>
+    
+                        <span className='text-[#002147] font-semibold text-xl'>Assignment Instruction</span>
+    
+                        <div dangerouslySetInnerHTML={{ __html: assignment.description }} className='w-[80%] mt-4 text-[#000000] text-xl' />
+    
+                    </div>
+    
+                    <hr className='mt-6' />
+    
+                    <div className='mt-6 flex items-center gap-4'>
+    
+                        <span className='text-[#002147] font-semibold text-xl'>Assignment File : </span>
+    
+                        <div className='mt-2 relative group'>
 
-                <span className='text-[#6E6E71] font-semibold text-lg'>Assignment Grade : <span className='text-[#002147] font-semibold'>10 Marks</span> </span>
+                            <button 
+                                className="text-[#403685] font-semibold mb-2 text-xl underline relative"
+                                onClick={() => downloadFile(assignment.file.filePath)}
+                            >
+                                {assignment.file.originalName}
+                            </button>
 
-            </div>
+                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 
+                                bg-[#403685] text-white text-sm px-3 py-1 rounded-lg opacity-0 
+                                group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
+                                Click to download file
+                            </div>
 
-            <hr className='mt-6' />
+                        </div>
+    
+                    </div>
+    
+                </div>
+    
+                <div className='p-6 flex items-end justify-end '>
+                    <YellowBtn onClick={() => navigate(`/submit-assignment-submission/${assignmentId}/${courseId}`)} text="Start Assignment Submit" />
+                </div>
+    
+            </div> 
+    
+        </>
+      )
 
-            <div className='mt-6'>
+    }    
 
-                <span className='text-[#002147] font-semibold text-xl'>Assignment Instruction</span>
-
-                <p className='w-[80%] mt-4 text-[#000000] text-lg'>
-                    Create a nutritious 1 week meal plan for a family of 5. In this family, we have a a middle-aged couple who are generally healthy but would do best if they lost some weight. The family also consists of an elderly grandma who has health issues like arthritis, hypertension, and diabetes  The couple also have two kids their eldest is a 16 y/o boy who is underweight for height of 5.9" and they youngest is a 7 y/o girl who is healthy but lactose intolerant ? This will count towards your midterm grade so be sure to put your best work forward.
-                </p>
-
-            </div>
-
-            <hr className='mt-6' />
-
-        </div>
-
-        <div className='p-6 flex items-end justify-end'>
-            <YellowBtn onClick={() => navigate(`/submit-assignment-submission/123434214133/67ada2dbb22c8ec372e03ec2`)} text="Start Assignment Submit" />
-        </div>
-
-    </div>
-
-  )
-
-}
 
 
 

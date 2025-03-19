@@ -1,7 +1,8 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { useSelector } from 'react-redux'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useGetQuizSubmissionResultQuery } from '../../store/apis/quizApis'
+import { axiosObj } from '../../utils/axios'
 
 
 
@@ -9,11 +10,43 @@ const QuizResult = () => {
 
   const {quizId} = useParams()
   const navigate = useNavigate()
+  const [isQuizSubmitted , setIsQuizSubmitted] = useState(false)
   
   const {token} = useSelector((state) => state.user)
 
   const {data : quizResult} = useGetQuizSubmissionResultQuery({token , quizId})
+
+
   
+  useEffect(() => {
+  
+    const checkQuizSubmission = async () => {
+              
+        try {
+                  
+            const response = await axiosObj.get(`/quiz/${quizId}/check-submission`, {
+                headers: { Authorization: `Bearer ${token}` },
+            })
+  
+            setIsQuizSubmitted(response.data.submitted)
+        } catch (error) {
+            console.log(error)
+        }
+    }
+  
+        checkQuizSubmission()
+  
+    } , [quizId , token])
+
+
+
+    useEffect(() => {
+        if(isQuizSubmitted){
+            localStorage.removeItem(`timer-time-left-${quizId}`)
+        }
+    } , [quizId , token])
+  
+    
 
   const progress = parseFloat(quizResult?.percentage)
 
@@ -34,7 +67,7 @@ const QuizResult = () => {
             <div>
                 <span className='text-[#565656] text-2xl'>{quizResult?.studentId?.userObjRef?.firstName} {quizResult?.studentId?.userObjRef?.lastName}</span>
                 <p className='text-[#565656] mt-2 text-2xl'>Points : <span>{quizResult?.totalScore} / {quizResult?.maxPossibleScore}</span> </p>
-                <p className='text-[#565656] mt-2 text-2xl'>Duration <span>{quizResult?.spentTime}</span> </p>
+                <p className='text-[#565656] mt-2 text-2xl'>Duration : <span>{quizResult?.spentTime}</span> </p>
             </div>
 
             <div>

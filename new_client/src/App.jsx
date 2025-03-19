@@ -69,6 +69,7 @@ import QuizResult from './pages/quiz/QuizResult'
 
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
+import StudentGrades from './pages/grades/StudentGrades'
 
 
 
@@ -196,6 +197,7 @@ function App() {
               <Route path="quiz-details/:quizId" element={<QuizDetails />} />
               <Route path="quiz-submission/:quizId" element={<QuizSubmission />} />
               <Route path="quiz-result/:quizId" element={<QuizResult />} />
+              <Route path="student-grades" element={<StudentGrades />} />
             </Route>
 
 

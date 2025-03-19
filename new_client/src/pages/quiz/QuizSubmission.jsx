@@ -31,8 +31,44 @@ const QuizSubmission = () => {
   const [submitted, setSubmitted] = useState(false)
   const [droppedOptions, setDroppedOptions] = useState({})
   const [quizSubmissionPopUp, setQuizSubmissionPopUp] = useState(false)
-
+  
   const [submitQuizAnswers] = useSubmitQuizAnswersMutation()
+  
+
+  useEffect(() => {
+
+    setLoading(true)
+
+    const checkQuizSubmission = async () => {
+      try {
+        const response = await axiosObj.get(`/quiz/${quizId}/check-submission`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        setSubmitted(response.data.submitted)
+      } catch (error) {
+        console.log(error)
+        setLoading(false)
+      }finally{
+        setLoading(true)
+      }
+    }
+  
+    checkQuizSubmission()
+  
+  } , [quizId , token])
+
+
+
+
+  useEffect(() => {
+    if(submitted){
+      localStorage.removeItem(`timer-time-left-${quizId}`)
+      setTimeout(() => {
+        navigate(`/quiz-result/${quizId}`)
+      }, 100)
+    }
+  } , [submitted , quizId , token , navigate])
+
 
 
 
@@ -62,6 +98,7 @@ const QuizSubmission = () => {
 
 
 
+
   useEffect(() => {
     const savedDraft = localStorage.getItem(`quiz-draft-${quizId}`)
     if (savedDraft) {
@@ -72,7 +109,6 @@ const QuizSubmission = () => {
   }, [quizId])
 
   
-
 
 
   const handleAnswerChange = (questionId, value) => {
@@ -127,8 +163,6 @@ const QuizSubmission = () => {
 
   };
   
-
-
 
 
 

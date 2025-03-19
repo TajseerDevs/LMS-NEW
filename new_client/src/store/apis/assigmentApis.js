@@ -21,6 +21,20 @@ const assigmentApi = createApi({
         headers: { Authorization: `Bearer ${token}` },
       }),
     }),
+    getCourseLatestAssignments : builder.query({
+      query: ({ token , courseId }) => ({
+        url: `/course/${courseId}/latest`,
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    }),
+    getAssignmentDetails : builder.query({
+      query: ({ token , assignmentId }) => ({
+        url: `/${assignmentId}`,
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    }),
   }),
 })
 
@@ -28,7 +42,9 @@ const assigmentApi = createApi({
 
 const { 
   useCreateAssignmentMutation ,
-  useGetInstructorAssigmentsQuery
+  useGetInstructorAssigmentsQuery ,
+  useGetCourseLatestAssignmentsQuery ,
+  useGetAssignmentDetailsQuery
 } = assigmentApi
 
 
@@ -36,5 +52,7 @@ const {
 export {
   useCreateAssignmentMutation ,
   useGetInstructorAssigmentsQuery ,
+  useGetCourseLatestAssignmentsQuery ,
+  useGetAssignmentDetailsQuery ,
   assigmentApi,
 }

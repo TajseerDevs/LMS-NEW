@@ -50,7 +50,7 @@ const QuizDetails = () => {
 
     useEffect(() => {
 
-        const getQuizDetails = async () => {
+        const checkQuizSubmission = async () => {
             
             try {
                 
@@ -64,12 +64,11 @@ const QuizDetails = () => {
             }
         }
 
-        getQuizDetails()
+        checkQuizSubmission()
 
     } , [quizId , token])
 
 
-    console.log(isQuizSubmitted)
 
 
     if(isLoading){
@@ -77,7 +76,9 @@ const QuizDetails = () => {
     }
 
 
+
   return (
+    
     <div className='p-10 flex items-center flex-col justify-center mx-auto'>
     
         <h1 className='text-4xl capitalize mt-20 font-semibold text-[#002147]'>{quiz?.title}</h1>

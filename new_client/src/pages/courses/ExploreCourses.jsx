@@ -117,7 +117,7 @@ const ExploreCourses = () => {
         </button>
 
         <span className="px-6 py-3 font-medium text-lg">
-          Page {currentPage} of {allCourses?.totalPages ?? 1}
+          Page {currentPage} of {allCourses?.totalPages === 0 ? 1 : allCourses?.totalPages}
         </span>
 
         <button

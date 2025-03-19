@@ -37,6 +37,7 @@ import reminderSvg from "../../assets/reminderSvg.svg"
 import CourseReminderModal from '../../components/CourseReminderModal'
 import { formatQuizDuration } from '../../utils/formatQuizDuration'
 import formatDate from '../../utils/formatDate'
+import { useGetCourseLatestAssignmentsQuery } from '../../store/apis/assigmentApis'
 
 // ! add a check that runs directly when any user enter this page to check if he enrolled in this course or not if not navigate him to single course page (not enrolled student)
 
@@ -94,6 +95,7 @@ const EnrolledCourse = () => {
     const [reminderFilter, setReminderFilter] = useState("")
 
     const [quizTabPage , setQuizTabPage] = useState(1)
+    const [assignmentTabPage , setAssignmentTabPage] = useState(1)
 
 
 
@@ -125,9 +127,10 @@ const EnrolledCourse = () => {
     const [incrementAttachmentView] = useIncrementAttachmentViewMutation()
 
     const {data : courseLastQuizzes} = useGetCourseLastestQuizzesQuery({token , page : quizTabPage , courseId} , {skip : selectedTab !== "Quiz"})
+    const {data : courseLastAssignments} = useGetCourseLatestAssignmentsQuery({token , page : assignmentTabPage , courseId} , {skip : selectedTab !== "Assignment"})
 
 
-    console.log(courseLastQuizzes)
+    console.log(courseLastAssignments)
 
 
     // to not open the course rate pop up if the user already provide a feedback 
@@ -143,12 +146,12 @@ const EnrolledCourse = () => {
 
     useEffect(() => {
 
-        // use this if statment when create the check api that check if user provide a feedback for the course when he finish it
+        // ! TODO use this if statment when create the check api that check if user provide a feedback for the course when he finish it
         // if (courseCompletionData?.completionPercentage === 100 && !hasProvidedFeedback) { 
         //     setIsCourseRateModalOpen(true)
         // }
 
-        // temprory one , will be deleted
+        // ! TODO temprory one , will be deleted
         // if (courseCompletionData?.progress === "100.00%" && !hasFeedback && !hasRated) {
         //     setIsCourseRateModalOpen(true)
         // }
@@ -203,6 +206,8 @@ const EnrolledCourse = () => {
     } , [courseId , token])
 
 
+
+
     const handleAttachmentClick = async (attachmentId , item) => {
         
         setIframeOpenedAt(Date.now())
@@ -234,6 +239,8 @@ const EnrolledCourse = () => {
         }
     
     }
+
+
 
 
     const navigateAttachments = (direction) => {
@@ -291,12 +298,14 @@ const EnrolledCourse = () => {
     }
     
 
+
     const getAttachmentsInSection = (sectionIndex) => {
         const sectionAttachments = globalAttachments.filter(
           (attachment) => attachment.sectionId === course?.sections?.[sectionIndex]?._id
         )
         return sectionAttachments
     }
+
 
 
     const isNextDisabled = () => {
@@ -310,6 +319,7 @@ const EnrolledCourse = () => {
     }
       
 
+
     const isPreviousDisabled = () => {
 
         const currentSectionAttachments = getAttachmentsInSection(currentSectionIndex);
@@ -319,6 +329,7 @@ const EnrolledCourse = () => {
         return !currentSectionAttachments?.length || (isFirstAttachment && isFirstSection);
     
     }
+
 
 
     const selectAttachment = (sectionIndex, attachmentIndex) => {
@@ -446,29 +457,6 @@ const EnrolledCourse = () => {
     }
 
 
-    const quizzes = [
-        {
-          title: "Science Intro",
-          date: "February 23, 2023 12:45 pm",
-          questions: 5,
-          time: "15 min",
-          grade: "5 Marks",
-        },
-        {
-          title: "Science Intro",
-          date: "February 23, 2023 12:45 pm",
-          questions: 5,
-          time: "15 min",
-          grade: "5 Marks",
-        },
-        {
-          title: "Science Intro",
-          date: "February 23, 2023 12:45 pm",
-          questions: 5,
-          time: "15 min",
-          grade: "5 Marks",
-        },
-    ]
 
 
     const assignments = [
@@ -905,7 +893,7 @@ const EnrolledCourse = () => {
 
 
         {/* start of quizzes place */}
-
+        {/* add empty quiz length case , pagination */}
         {selectedTab === "Quiz" && (
 
             <div className='p-3 mt-2 flex flex-col gap-4 relative w-[80%]'>
@@ -934,7 +922,7 @@ const EnrolledCourse = () => {
 
                             <div className="text-center">
                                 <p className="text-sm text-[#AFAFAF]">Time To Complete</p>
-                                <p className="font-semibold text-[#002147]">{formatQuizDuration(quiz?.duration)}</p>
+                                <p className="font-semibold text-[#002147]">{quiz?.duration && quiz?.duration?.value && quiz?.duration?.unit && formatQuizDuration(quiz?.duration)}</p>
                             </div>
 
                             <div className="text-center">
@@ -944,7 +932,7 @@ const EnrolledCourse = () => {
 
                         </div>
 
-                        <YellowBtn onClick={() => navigate(`/quiz-details/${quiz?._id}`)} text="Start" icon={FaArrowRight}/>
+                        {quiz?.hasSubmission ? <YellowBtn onClick={() => navigate(`/quiz-result/${quiz?._id}`)} text="View Result" icon={FaArrowRight}/> : <YellowBtn onClick={() => navigate(`/quiz-details/${quiz?._id}`)} text="Start" icon={FaArrowRight}/>}
 
 
                     </div>
@@ -985,55 +973,52 @@ const EnrolledCourse = () => {
 
 
         {/* start of assignment place */}
-
+        {/* pagination */}
+        
         {selectedTab === "Assignment" && (
 
             <div className='p-3 mt-2 flex flex-col gap-4 relative w-[80%]'>
 
                 <h3 className='text-[#002147] mb-6 font-semibold text-[30px]'>Course Assignments</h3>
 
-                {assignments.map((assignment) => (
+                {courseLastAssignments?.assignments?.length > 0 ? (
 
-                    <div key={assignment.id} className="flex w-[800px] items-center bg-white last:mb-6 p-4 rounded-lg shadow-md">
+                    courseLastAssignments?.assignments?.map((assignment) => (
 
-                        <div className="w-16 h-16 flex items-center justify-center bg-purple-100 rounded-lg">
-                            <img src={assignmentSvg} alt="Quiz Icon" className="w-10 h-10" />
+                        <div key={assignment?._id} className="flex w-[600px] items-center bg-white last:mb-6 p-4 rounded-lg shadow-md">
+
+                            <div className="w-16 h-16 flex items-center justify-center bg-purple-100 rounded-lg">
+                                <img src={assignmentSvg} alt="Quiz Icon" className="w-10 h-10" />
+                            </div>
+
+                            <div className="flex-1 flex items-center justify-between gap-16 ml-4">
+
+                                <div>
+                                    <h3 className="text-lg text-[#35353A] font-bold">{assignment?.title}</h3>
+                                    <p className="text-gray-500 text-sm">{formatDate(assignment?.dueDate)}</p>
+                                </div>
+
+                                <div className="text-center mr-10">
+                                    <p className="text-sm text-[#AFAFAF]">Grade</p>
+                                    <p className="font-semibold text-[#002147]">{assignment.mark}</p>
+                                </div>
+
+                            </div>
+
+
+                            {assignment?.hasSubmission ? <YellowBtn onClick={() => navigate(`/student-grades`)} text="View" icon={FaArrowRight} /> : <YellowBtn onClick={() => navigate(`/view-assignment-details/${assignment._id}/${courseId}`)} text="View" icon={FaArrowRight} />}
+                                
                         </div>
-
-                        <div className="flex-1 flex items-center gap-16 ml-4">
-
-                            <div>
-                                <h3 className="text-lg text-[#35353A] font-bold">{assignment.title}</h3>
-                                <p className="text-gray-500 text-sm">{assignment.date}</p>
-                            </div>
-
-                            <div className="text-center">
-                                <p className="text-sm text-[#AFAFAF]">Grade</p>
-                                <p className="font-semibold text-[#002147]">{assignment.grade}</p>
-                            </div>
-
-                        </div>
-
-                        {/* <div className="flex items-center mr-36 gap-8 text-gray-600">
-
-                            <div className="text-center">
-                                <p className="text-sm text-[#AFAFAF]">Grade</p>
-                                <p className="font-semibold text-[#002147]">{quiz.grade}</p>
-                            </div>
-
-                        </div> */}
-
-                        <YellowBtn onClick={() => navigate(`/view-assignment-details/${assignment.id}/21231231414`)} text="View" icon={FaArrowRight}/>
+                    ))
+                        ) : (
+                            <p className="text-center text-gray-500 text-2xl mt-4">No assignments found.</p>
+                        )}
 
                     </div>
 
-                ))}
+                )}
 
-            </div>
-
-        )}
-
-        {/* end of assignment place */}
+                {/* end of assignment place */}
 
 
 
