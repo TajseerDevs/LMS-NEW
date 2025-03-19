@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SCORM Integration</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: Arial, Helvetica, sans-serif;
+        background-color: #f4f4f4;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+      }
+      #loader {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        display: none;
+      }
+      iframe {
+        width: 100vw;
+        height: 100vh;
+        border: none;
+        display: none;
+      }
+      .message {
+        color: #333;
+        text-align: center;
+        font-size: 1.2em;
+        display: none;
+      }
+      #main {
+        position: relative;
+        width: 100vw;
+        height: 100vh;
+      }
+      .end-sec {
+        display: flex;
+        justify-content: center;
+        width: 100%;
+        margin: 20px 0;
+      }
+    </style>
+
+    <script src="scorm-again.min.js"></script>
+
+    <script>
+
+      let startTime, endTime, duration
+
+      document.addEventListener("DOMContentLoaded", function () {
+        startTime = new Date();
+        loadScormContent();
+      })
+    
+
+      function loadScormContent() {
+
+        const mainContainer = document.getElementById("main");
+        const loader = document.getElementById("loader");
+        const message = document.querySelector(".message");
+
+        loader.style.display = "block";
+
+        let launchUrl = getQueryParameter("launchUrl");
+        let userId = getQueryParameter("userId");
+        let attachmentId = getQueryParameter("attachmentId");
+        let username = getQueryParameter("username");
+        let version = getQueryParameter("version");
+        let token = getQueryParameter("token");
+        let attachment = getQueryParameter("attachment");
+        let duration = getQueryParameter("duration");
+        let type = getQueryParameter("type");
+        let courseId = getQueryParameter("courseId");
+
+        console.log(type)
+
+        function getQueryParameter(param) {
+          const urlParams = new URLSearchParams(window.location.search);
+          return urlParams.get(param);
+        }
+        
+        if (!launchUrl || !userId || !attachmentId) {
+          console.error("Error: Missing required parameters.");
+          alert("Required parameters missing (launchUrl, userId, attachmentId).");
+          return;
+        }
+
+
+        if (!token) {
+          console.error("Error: No authorization token found.")
+          alert("Authorization token missing.")
+          return
+        }
+
+        
+        const studentName = username; 
+        const apiUrl = "http://localhost:5500/api/v1/scorm";
+
+        const apiSettings = {
+          lmsCommitUrl: `${apiUrl}/${userId}/${attachmentId}/set-log`,
+          logLevel: 1,
+          autocommitSeconds: 1,
+          autoCommit: true,
+          asyncCommit: true,
+          xhrWithCredentials: false,
+          xhrHeaders: {
+            accept: "application/json",
+            Authorization: `Bearer ${token}`
+          },
+          responseHandler: (res) => {
+            console.log(res);
+            if (res.status === 406) {
+              alert("Please login");
+              window.close();
+            }
+          },
+        };
+
+        if(type === "Video"){
+          fetchInitialAPI(apiUrl, userId, attachmentId, token , username)
+        }
+
+        let hasTriggered90PercentAPI = false
+        
+        fetch(`${apiUrl}/${userId}/${attachmentId}/get-log`, {
+          method: "GET",
+          headers: {
+            accept: "application/json",
+            Authorization: `Bearer ${token}`
+          },
+        })
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+          })
+          .then((result) => {
+            initializeScormAPI(version, userId, studentName, apiSettings, result);
+            const iframe = document.createElement("iframe");
+            const div = document.createElement("div");
+            iframe.src = launchUrl;
+            mainContainer.appendChild(iframe);
+            mainContainer.appendChild(div);
+            iframe.style.display = "block";
+            iframe.onload = function () {
+
+              try {
+
+                const iframeDocument = iframe.contentWindow.document;
+                const videoElement = iframeDocument.querySelector("video");
+
+                if (videoElement) {
+
+                  videoElement.addEventListener("timeupdate", () => {
+
+                    const currentTime = videoElement.currentTime;
+                    const duration = videoElement.duration;
+                    const completionPercentage = (currentTime / duration) * 100;
+
+                    if (duration > 0) {
+
+                     const completionPercentage = (currentTime / duration) * 100;
+
+                    if (completionPercentage >= 90 && !hasTriggered90PercentAPI) {
+                      fetch90PercentAPI(apiUrl , userId , attachmentId , token , completionPercentage , duration , username)
+                      fetchCourseCompletionAPI(courseId , token) // could be removed
+                      hasTriggered90PercentAPI = true;
+                    }
+                  }
+                    console.log(`Video Playback Progress: ${completionPercentage.toFixed(2)}%`)
+                  })
+                  videoElement.addEventListener("loadedmetadata", () => {
+                    console.log("Video Duration:", videoElement.duration)
+                  })
+
+                } else {
+                  console.error("No video element found in the iframe.")
+                }
+              } catch (error) {
+                console.error("Cannot access iframe DOM due to cross-origin restrictions.", error)
+              }
+            };
+          })
+          .catch((error) => {
+            console.error("Error fetching logs:", error);
+          })
+          .finally(() => {
+            loader.style.display = "none";
+          });
+      }
+
+
+      function fetchInitialAPI(apiUrl, userId, attachmentId, token , username) {
+
+        const contentCmi = {
+          student_id: userId,
+          student_name: username,
+          lesson_status: "incomplete",
+        };
+
+        const payload = {
+          cmi: {},
+          contentCmi,
+        };
+
+        fetch(`${apiUrl}/${userId}/${attachmentId}/set-log`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(payload),
+        })
+          .then((response) => response.json())
+          .then((data) => console.log("Initial API response:", data))
+          .catch((error) => console.error("Error in initial API call:", error));
+        }
+
+
+      // could be removed
+      function fetchCourseCompletionAPI(courseId, token) {
+
+        fetch(`http://localhost:5500/api/v1/student/course-completion-percentage/${courseId}`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        })
+          .then((data) => console.log("get course completion", data))
+          .catch((error) => console.error("Error in initial API call:", error));
+        }
+
+
+
+        function fetch90PercentAPI(apiUrl , userId , attachmentId , token , completionPercentage , duration , username) {
+
+          const contentCmi = {
+          student_id: userId,
+          student_name: username,
+          lesson_status: "completed",
+          completionPercentage,
+          duration
+        }
+
+        const payload = {
+          cmi: {},
+          contentCmi,
+        };
+        
+        fetch(`${apiUrl}/${userId}/${attachmentId}/set-log` , {
+          method : "POST" ,
+          headers : {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          },
+          body : JSON.stringify(payload)
+        })
+          .then((response) => response.json())
+          .then((data) => console.log("Initial API response:", data))
+          .catch((error) => console.error("Error in initial API call:", error));
+        }
+
+
+
+
+      function initializeScormAPI(version, userId, studentName, apiSettings, result) {
+
+        let returnData = {}; 
+
+        if (version === "1.2") {
+
+          window.API = new window.Scorm12API(apiSettings);
+          
+          window.API.cmi.core.student_id = userId;
+          window.API.cmi.core.student_name = studentName;
+
+          returnData.lesson_status = window.API.cmi.core.lesson_status;
+          returnData.score = window.API.cmi.core.score;
+          returnData.completion_status = window.API.cmi.core.completion_status;
+          returnData.total_time = window.API.cmi.core.total_time;
+          window.API.cmi.core.start_time = startTime;
+          window.API.cmi.core.end_time = endTime;
+          returnData.start_time = window.API.cmi.core.start_time;
+          returnData.end_time = window.API.cmi.core.end_time;
+
+        } else if (version === "2004") {
+
+          window.API_1484_11 = new window.Scorm2004API(apiSettings);
+
+          window.API_1484_11.cmi.student_id = userId;
+          window.API_1484_11.cmi.student_name = studentName;
+          window.API_1484_11.cmi.learner_id = userId;
+          window.API_1484_11.cmi.learner_name = studentName;
+
+          returnData.lesson_status = window.API_1484_11.cmi.lesson_status;
+          returnData.score = window.API_1484_11.cmi.score;
+          returnData.completion_status = window.API_1484_11.cmi.completion_status;
+          returnData.total_time = window.API_1484_11.cmi.total_time;
+          window.API_1484_11.cmi.start_time = startTime;
+          window.API_1484_11.cmi.end_time = endTime;
+          returnData.start_time = window.API_1484_11.cmi.start_time
+          returnData.end_time = window.API_1484_11.cmi.end_time
+
+        }
+
+        if (result && result.cmi) {
+
+          const cmiData = result.cmi
+
+          if (version === "1.2") {
+            window.API.loadFromJSON(cmiData);
+          } else if (version === "2004") {
+            window.API_1484_11.loadFromJSON(cmiData);
+          }
+        }
+
+        window.addEventListener("beforeunload", () => {
+
+          if (version === "1.2") {
+            window.API.Commit();
+          } else if (version === "2004") {
+            window.API_1484_11.Commit();
+          }
+
+        })
+
+
+        return returnData
+
+      }
+
+      function handleEndBtn() {
+        window.API.LMSCommit()
+      }
+
+      function closeLesson() {
+        handleEndBtn();  
+        setTimeout(() => {
+          window.close();  
+        }, 500);  
+      } 
+
+
+
+
+    </script>
+
+    
+  </head>
+  <body>
+    <div id="main">
+      <div id="loader">
+        <p>Loading SCORM course...</p>
+      </div>
+      <p class="message"></p>
+      
+    </div>
+  </body>
+</html>

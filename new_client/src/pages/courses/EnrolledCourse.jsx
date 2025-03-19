@@ -1,0 +1,1299 @@
+import React, { useEffect, useState } from 'react'
+import { useSelector } from 'react-redux'
+import { useNavigate, useParams } from 'react-router-dom'
+import ReactQuill from "react-quill"
+import 'react-quill/dist/quill.snow.css'
+import { FaChevronRight , FaAngleRight, FaChevronLeft , FaAngleDown , FaPlayCircle, FaFileAlt, FaImage, FaTasks, FaStar, FaFilter, FaArrowRight, FaPlus  } from "react-icons/fa"
+import { MdModeEdit , MdDelete } from "react-icons/md";
+import { FaClock } from "react-icons/fa6";
+import { FaCalendarAlt } from "react-icons/fa";
+
+
+import sections from '../../data/sections'
+import testImg from "../../assets/test.png"
+import { FiArrowRight, FiImage , FiMessageCircle  } from "react-icons/fi"
+import FAQS from '../../components/FAQS'
+import FaqModal from '../../components/FaqModal'
+import { IoIosArrowDown , IoIosArrowForward  } from "react-icons/io";
+import { MdEdit , MdDeleteForever  } from "react-icons/md";
+import DeleteNoteModal from '../../components/DeleteNoteModal'
+import {axiosObj} from "../../utils/axios"
+import {useGetCourseCompletionPercentageQuery , useCheckFeedbackStatusQuery} from "../../store/apis/studentApis"
+import { useIncrementAttachmentViewMutation , useIncrementSectionViewMutation } from '../../store/apis/courseApis'
+import { useGetCourseLastestQuizzesQuery } from '../../store/apis/quizApis'
+import { formatTimeWithLabels } from '../../utils/formatTime'
+import getTotalTime from '../../utils/getTotalTime'
+import { useSetScormLogsMutation } from '../../store/apis/scormApis'
+import CourseRatePopUp from '../../components/CourseRatePopUp'
+import ReviewCard from '../../components/ReviewCard'
+import ReportFeedbackPopUp from '../../components/ReportFeedbackPopUp'
+import YellowBtn from "../../components/YellowBtn"
+
+import { PiExport } from "react-icons/pi";
+
+import quizSvg from "../../assets/quiz-svg.svg"
+import assignmentSvg from "../../assets/purple-assigment.svg"
+import reminderSvg from "../../assets/reminderSvg.svg"
+import CourseReminderModal from '../../components/CourseReminderModal'
+import { formatQuizDuration } from '../../utils/formatQuizDuration'
+import formatDate from '../../utils/formatDate'
+
+// ! add a check that runs directly when any user enter this page to check if he enrolled in this course or not if not navigate him to single course page (not enrolled student)
+
+
+
+const EnrolledCourse = () => {
+
+    const params = useParams()
+    const navigate = useNavigate()
+    const courseId = params.courseId
+    
+    const { token , user } = useSelector((state) => state.user)
+
+    const [course, setCourse] = useState(null)
+    const [error, setError] = useState(null)
+    const [launchUrl, setLaunchUrl] = useState("")
+    const [defaultLaunchUrl, setdefaultLaunchUrl] = useState("https://www.youtube.com/embed/ZCX9u9KZSwc")
+    const [attachmentId, setAttachmentId] = useState("")
+    const [expandedSections, setExpandedSections] = useState([])
+    const [attachment, setAttachment] = useState({})
+    const [globalAttachments, setGlobalAttachments] = useState([])
+    const [showIframe, setShowIframe] = useState(false)
+    const [currentSectionIndex, setCurrentSectionIndex] = useState(0)
+    const [currentAttachmentIndex, setCurrentAttachmentIndex] = useState(0)
+    const [iframeOpenedAt, setIframeOpenedAt] = useState(null) 
+    const [isVideoItem , setIsVideoItem] = useState(false)
+    const [activeTab, setActiveTab] = useState("iframe")
+    const [courseSections, setCourseSections] = useState([])
+    const [sectionDropdownOpen, setSectionDropdownOpen] = useState(false)
+    const [showReplyInput, setShowReplyInput] = useState(false)
+    const [activeReplyInput, setActiveReplyInput] = useState(null)
+
+    const [newQuestion, setNewQuestion] = useState("")
+    const [answerState, setAnswerState] = useState({})
+    const [selectedSection , setSelectedSection] = useState('')
+
+    const [selectedTab , setSelectedTab] = useState('')
+
+    const [isFaqModalOpen, setIsFaqModalOpen] = useState(false)
+
+    const [isCourseRateModalOpen , setIsCourseRateModalOpen] = useState(false)
+    const [isFeedbackReportModalOpen , setIsFeedbackReportModalOpen] = useState(false)
+    const [isCourseReminderModalOpen , setIsCourseReminderModalOpen] = useState(false)
+
+    const [isExpanded , setIsExpanded] = useState()
+    const [activeSectionIndex , setactiveSectionIndex] = useState()
+
+    const [hasProvidedFeedback, setHasProvidedFeedback] = useState(false);
+
+    const [hasRated, setHasRated] = useState(false);
+    const [hasFeedback, setHasFeedback] = useState(false);
+
+    const [ratingType, setRatingType] = useState("")
+    const [sortBy, setsortBy] = useState("")
+    const [reminderFilter, setReminderFilter] = useState("")
+
+    const [quizTabPage , setQuizTabPage] = useState(1)
+
+
+
+    const [notes , setNotes] = useState([
+        { id: 1, title: "Note #1", content: "The Art of UX/UI Design Great design isn't just about aesthetics; it's about experience. Every interaction should feel intuitive, every transition seamless, and every color intentional.Tips for Impactful Design:" },
+        { id: 2, title: "Note #2", content: "The Art of UX/UI Design Great design isn't just about aesthetics; it's about experience. Every interaction should feel intuitive, every transition seamless, and every color intentional.Tips for Impactful Design:" },
+        { id: 3, title: "Note #3", content: "The Art of UX/UI Design Great design isn't just about aesthetics; it's about experience. Every interaction should feel intuitive, every transition seamless, and every color intentional.Tips for Impactful Design:" },
+    ])
+
+    const [noteText , setNoteText] = useState("")
+
+    const [expandedNotes, setExpandedNotes] = useState({})
+    const [editingNoteId, setEditingNoteId] = useState(null)
+    const [editedContent, setEditedContent] = useState("")
+    const [deleteNoteId, setDeleteNoteId] = useState(null)
+
+    const openDeleteModal = (id) => setDeleteNoteId(id)
+    const closeDeleteModal = () => setDeleteNoteId(null)
+
+
+    const { data: courseCompletionData, isLoading, isError, refetch } = useGetCourseCompletionPercentageQuery({ token , courseId },
+      // { skip: user?.role !== 'student' }
+    )
+
+    const {data : isFeedbackProvided} = useCheckFeedbackStatusQuery({token , courseId})
+
+    const [setScormLogs] = useSetScormLogsMutation()
+    const [incrementSectionView] = useIncrementSectionViewMutation()
+    const [incrementAttachmentView] = useIncrementAttachmentViewMutation()
+
+    const {data : courseLastQuizzes} = useGetCourseLastestQuizzesQuery({token , page : quizTabPage , courseId} , {skip : selectedTab !== "Quiz"})
+
+
+    console.log(courseLastQuizzes)
+
+
+    // to not open the course rate pop up if the user already provide a feedback 
+    useEffect(() => { 
+
+        setHasRated(isFeedbackProvided?.hasRated)
+        setHasFeedback(isFeedbackProvided?.hasFeedback)
+
+    } , [])
+
+
+    
+
+    useEffect(() => {
+
+        // use this if statment when create the check api that check if user provide a feedback for the course when he finish it
+        // if (courseCompletionData?.completionPercentage === 100 && !hasProvidedFeedback) { 
+        //     setIsCourseRateModalOpen(true)
+        // }
+
+        // temprory one , will be deleted
+        // if (courseCompletionData?.progress === "100.00%" && !hasFeedback && !hasRated) {
+        //     setIsCourseRateModalOpen(true)
+        // }
+
+    } , [courseCompletionData, ])
+    
+
+
+
+    useEffect(() => {
+
+        const fetchCourse = async () => {
+
+            try {
+                
+                const response = await axiosObj.get(`/courses/${courseId}` , {
+                    headers : {
+                        Authorization : `Bearer ${token}`
+                    }
+                })
+
+                const courseData = response.data
+                setCourse(courseData)
+
+                const sections = courseData?.sections ?? []
+                setCourseSections(sections)
+
+                const attachments = courseData?.sections?.flatMap((section) => 
+                    section?.items?.flatMap((item) => 
+                        item?.attachments?.filter((attachment) => attachment?.launchUrl?.trim()).map((attachment) => ({
+                            ...attachment,
+                            itemName: item.name,
+                            sectionId: section._id,
+                        }))
+                    )
+                ) ?? []
+
+                setGlobalAttachments(attachments)
+
+            } catch (error) {
+                console.log(error)
+            }
+
+        }
+
+        if (user?.role === "student") {
+            refetch()
+        }
+
+        fetchCourse()
+
+    } , [courseId , token])
+
+
+    const handleAttachmentClick = async (attachmentId , item) => {
+        
+        setIframeOpenedAt(Date.now())
+        refetch()
+
+        if (item?.type === "Video") {
+            setIsVideoItem(true)
+            alert("This video will be marked as completed when complete 90% of its duration automatically.")
+        }
+
+        try {
+
+            const downloadResponse = await axiosObj.get(`/courses/download/${attachmentId}`, {
+                headers: { Authorization: `Bearer ${token}` },
+            })
+            
+            const launchUrl = downloadResponse.data.launchUrl
+            setLaunchUrl(`http://localhost:5500${launchUrl}`)
+            setAttachmentId(attachmentId)
+
+            const response = await axiosObj.get(`/courses/item-attachment/${attachmentId}`, {
+                headers: { Authorization: `Bearer ${token}` },
+            })
+            
+            setAttachment(response.data)
+
+        } catch (error) {
+            console.log(error)
+        }
+    
+    }
+
+
+    const navigateAttachments = (direction) => {
+
+        const currentSectionAttachments = getAttachmentsInSection(currentSectionIndex)
+      
+        if (!currentSectionAttachments || currentSectionAttachments.length === 0) return
+      
+        if (direction === "next") {
+          if (currentAttachmentIndex < currentSectionAttachments.length - 1) {
+            setCurrentAttachmentIndex((prev) => prev + 1);
+            handleAttachmentClick(
+              currentSectionAttachments[currentAttachmentIndex + 1]._id,
+              currentAttachmentIndex + 1,
+              currentSectionIndex
+            );
+          } else if (currentSectionIndex < course?.sections?.length - 1) {
+            const nextSectionAttachments = getAttachmentsInSection(currentSectionIndex + 1);
+            if (nextSectionAttachments?.length) {
+              setCurrentSectionIndex((prev) => prev + 1);
+              setCurrentAttachmentIndex(0);
+              handleAttachmentClick(
+                nextSectionAttachments[0]._id,
+                0,
+                currentSectionIndex + 1
+              );
+            }
+          }
+        }
+      
+    
+        if (direction === "prev") {
+          
+          if (currentAttachmentIndex > 0) {
+            setCurrentAttachmentIndex((prev) => prev - 1);
+            handleAttachmentClick(
+              currentSectionAttachments[currentAttachmentIndex - 1]._id,
+              currentAttachmentIndex - 1,
+              currentSectionIndex
+            );
+          } else if (currentSectionIndex > 0) {
+            const prevSectionAttachments = getAttachmentsInSection(currentSectionIndex - 1);
+            if (prevSectionAttachments?.length) {
+              setCurrentSectionIndex((prev) => prev - 1);
+              setCurrentAttachmentIndex(prevSectionAttachments.length - 1);
+              handleAttachmentClick(
+                prevSectionAttachments[prevSectionAttachments.length - 1]._id,
+                prevSectionAttachments.length - 1,
+                currentSectionIndex - 1
+              );
+            }
+          }
+        }
+
+    }
+    
+
+    const getAttachmentsInSection = (sectionIndex) => {
+        const sectionAttachments = globalAttachments.filter(
+          (attachment) => attachment.sectionId === course?.sections?.[sectionIndex]?._id
+        )
+        return sectionAttachments
+    }
+
+
+    const isNextDisabled = () => {
+    
+        const currentSectionAttachments = getAttachmentsInSection(currentSectionIndex);
+        const isLastAttachment = currentAttachmentIndex === currentSectionAttachments.length - 1;
+        const isLastSection = currentSectionIndex === course?.sections?.length - 1;
+      
+        return !currentSectionAttachments?.length || (isLastAttachment && isLastSection);
+      
+    }
+      
+
+    const isPreviousDisabled = () => {
+
+        const currentSectionAttachments = getAttachmentsInSection(currentSectionIndex);
+        const isFirstAttachment = currentAttachmentIndex === 0
+        const isFirstSection = currentSectionIndex === 0
+      
+        return !currentSectionAttachments?.length || (isFirstAttachment && isFirstSection);
+    
+    }
+
+
+    const selectAttachment = (sectionIndex, attachmentIndex) => {
+    
+        const sectionAttachments = getAttachmentsInSection(sectionIndex);
+      
+        if (sectionAttachments?.length > 0 && sectionAttachments[attachmentIndex]) {
+          setCurrentSectionIndex(sectionIndex);
+          setCurrentAttachmentIndex(attachmentIndex);
+          handleAttachmentClick(
+            sectionAttachments[attachmentIndex]._id,
+            attachmentIndex,
+            sectionIndex
+          )
+        }
+    
+    }
+
+
+    const handleSectionSelect = (section) => {
+        setSelectedSection(section)
+    }
+
+
+    const isQuillEmpty = (value) => {
+        return value.replace(/(<([^>]+)>)/gi, "").trim() === ""
+    }
+
+
+    const handleDelete = () => {
+      setNotes(notes.filter((note) => note.id !== deleteNoteId))
+      closeDeleteModal()
+    }
+
+
+    const handleEditClick = (note) => {
+
+        if (!expandedNotes[note.id]) {
+          toggleExpansion(note.id)
+        }
+
+        setEditingNoteId(note.id)
+        setEditedContent(note.content)
+
+    }
+    
+
+    const handleSaveClick = () => {
+        
+        setNotes((prevNotes) => prevNotes.map((note) => note.id === editingNoteId ? { ...note , content: editedContent } : note))
+
+        setEditingNoteId(null)
+
+    }
+
+
+    const toggleExpansion = (noteId) => {
+      setExpandedNotes((prev) => ({
+        ...prev ,
+        [noteId]: !prev[noteId] , 
+      }))
+    }
+
+
+    const handleCancelClick = () => {
+        setEditingNoteId(null)
+        setEditedContent("")
+    }
+    
+
+    const toggleSection = (sectionId) => {
+        setExpandedSections((prevSections) =>
+          prevSections.includes(sectionId)
+            ? prevSections.filter((id) => id !== sectionId)
+            : [...prevSections, sectionId]
+        )
+    }
+
+
+    const getItemIcon = (type) => {
+        switch (type) {
+          case "Video" :
+            return <FaPlayCircle className="text-orange-300" size={20} />
+          case "Document":
+            return <FaFileAlt className="text-blue-500" size={20} />
+          case "Image" :
+            return <FaImage className="text-green-500" size={20} />
+          case "Activity" :
+            return <FaTasks className="text-purple-500" size={20} />
+          default:
+            return null
+        }
+    }
+
+
+    const markAsCompleted = async (attachmentId) => {
+        
+        const duration = iframeOpenedAt ? Math.floor((Date.now() - iframeOpenedAt) / 1000) : 0
+
+        refetch()
+
+        const contentCmi = {
+            student_id : user._id ,
+            student_name : `${user?.firstName} ${user?.lastName}` ,
+            lesson_status : "completed" ,
+            duration
+        }
+
+        try {
+            
+            await setScormLogs({token , userId : user?._id , attachmentId , contentCmi })
+            
+            if(user?.role === "student") {
+                refetch()
+            }
+
+        } catch (error) {
+            console.log(error)
+        }
+
+        setLaunchUrl("") 
+        setShowIframe(false)
+        setIframeOpenedAt(null)
+
+    }
+
+
+    const quizzes = [
+        {
+          title: "Science Intro",
+          date: "February 23, 2023 12:45 pm",
+          questions: 5,
+          time: "15 min",
+          grade: "5 Marks",
+        },
+        {
+          title: "Science Intro",
+          date: "February 23, 2023 12:45 pm",
+          questions: 5,
+          time: "15 min",
+          grade: "5 Marks",
+        },
+        {
+          title: "Science Intro",
+          date: "February 23, 2023 12:45 pm",
+          questions: 5,
+          time: "15 min",
+          grade: "5 Marks",
+        },
+    ]
+
+
+    const assignments = [
+        {  
+          id : 1 ,
+          title: "Science Intro",
+          date: "February 23, 2023 12:45 pm",
+          grade: "5 Marks",
+        },
+        {
+          id : 2 ,
+          title: "Science Intro",
+          date: "February 23, 2023 12:45 pm",
+          grade: "10 Marks",
+        },
+        {
+          id : 3 ,
+          title: "Science Intro",
+          date: "February 23, 2023 12:45 pm",
+          grade: "15 Marks",
+        },
+    ]
+
+
+    const reminders = [
+        {
+            id: 1,
+            title: "Stay on top of your studies with a daily reminder to keep you on track!",
+            time: "11:30 AM",
+            type: "daily",
+        },
+        {
+            id: 2,
+            title: "Plan ahead and receive a weekly reminder to manage your progress effectively",
+            time: "11:30 AM",
+            type: "weekly",
+            days: ["Sunday", "Tuesday", "Thursday"],
+        },
+        {
+            id: 3,
+            title: "Set a one-time reminder for important deadlines or events.",
+            time: "11:30 AM",
+            type: "one-time",
+            date: "February 27, 2025",
+        },
+    ]
+
+
+
+    const getColor = (type) => {
+        switch (type) {
+          case "daily":
+            return "bg-[#68FFAF]";
+          case "weekly":
+            return "bg-[#88D6FF]";
+          case "one-time":
+            return "bg-[#FFC768]";
+          default:
+            return "bg-gray-400";
+        }
+    }
+
+
+
+    if (!course) {
+        return <div>Loading course data...</div>
+    }
+
+
+
+  return (
+    <div className="flex p-6">
+
+      {/* Left Course Content */} 
+      <div className="w-3/4 h-[750px] bg-gray-100 p-4 rounded-md">
+
+        {
+            launchUrl ? 
+            (
+
+                <iframe
+                    src={`http://localhost:5500/public/scorm-launcher.html?launchUrl=${encodeURIComponent(
+                    launchUrl
+                    )}&userId=${encodeURIComponent(
+                    user?._id
+                    )}&version=${encodeURIComponent(
+                    attachment?.scormVersion
+                    )}&username=${encodeURIComponent(`${user?.firstName} ${user?.lastName}`)}&token=${encodeURIComponent(
+                    token
+                    )}&attachmentId=${encodeURIComponent(attachmentId)}&attachment=${encodeURIComponent(attachment?.type)}
+                    &duration=${encodeURIComponent(Math.floor((Date.now() - iframeOpenedAt) / 1000))}
+                    &type=${encodeURIComponent(attachment?.type)}&courseId=${encodeURIComponent(courseId)}`}
+                    title="SCORM Content"
+                    width="100%"
+                    height="600px"
+                    key={launchUrl} 
+              />
+
+            ) 
+            :
+            (
+                <iframe className="w-[100%] h-[100%] p-2 rounded-md" src={defaultLaunchUrl} frameborder="0"></iframe>
+            )
+
+        }
+
+        <div className="flex justify-between mt-10">
+
+            <div className='flex gap-6 items-center'>
+
+                {launchUrl && attachment && (attachment?.type === "Image" || attachment?.type === "Document") && (
+                    <button onClick={() => markAsCompleted(attachment?._id)} className="bg-[#FFC200] transition-all duration-300 text-[#002147] font-semibold py-2 px-6 rounded-lg shadow-md hover:bg-yellow-600">
+                        Mark as Completed
+                    </button>
+                )}
+                
+                {launchUrl && <button onClick={() => {setLaunchUrl("") ; setCurrentAttachmentIndex(null)}} className="bg-[#002147] transition-all duration-300 text-white font-semibold py-2 px-6 rounded-lg shadow-md hover:bg-[#2e5584]">
+                    Close Activity
+                </button>}
+
+                {
+                    selectedTab !== "" && (
+                        <button onClick={() => {setSelectedTab("")}} className="bg-[#002147] transition-all duration-300 text-white font-semibold py-2 px-6 rounded-lg shadow-md hover:bg-[#2e5584]">
+                            {`Close ${selectedTab} tab`} 
+                        </button>
+                    )
+                }
+
+            </div>
+
+            <div>
+            
+                {/* <span className='text-lg mr-6 font-semibold text-[#000]'>
+                    {`Module ${currentSectionIndex} / ${course?.sections?.length}`}
+                </span> */}
+
+                {launchUrl && (
+                    <>
+                        <button onClick={() => navigateAttachments("prev")} disabled={isPreviousDisabled()} className="bg-[#FFC200] transition-all duration-300 hover:bg-yellow-600 text-white font-semibold py-2 px-4 rounded-md shadow-md mr-2 disabled:cursor-not-allowed disabled:bg-gray-300">
+                            <FaChevronLeft />
+                        </button>
+
+                        <button onClick={() => navigateAttachments("next")} disabled={isNextDisabled()} className="bg-[#FFC200] transition-all duration-300 hover:bg-yellow-600 text-white font-semibold py-2 px-4 rounded-md shadow-md disabled:cursor-not-allowed disabled:bg-gray-300">
+                            <FaChevronRight />
+                        </button>
+                    </>
+                )
+
+                }
+
+            </div>
+
+        </div>
+
+        <div className="p-3 cursor-pointer flex gap-10 mt-5 text-xl text-[#002147] font-semibold border-b">
+
+            {["FAQ's", "Notes", "Quiz", "Assignment", "Reminder" , "Feedback"].map((tab) => (
+
+                <span
+                    key={tab}
+                    onClick={() => setSelectedTab(tab)}
+                    className={`relative pb-2 ${selectedTab === tab ? "text-[#FFC200] after:absolute after:left-0 after:bottom-0 after:w-full after:h-0.5 after:bg-[#FFC200]" : ""}`}
+                >
+                    {tab}
+                </span>
+
+            ))}
+
+        </div>
+        
+
+
+        {/* faqs place */}
+        {selectedTab === "FAQ's" && (
+
+            <div className='p-3 w-full'>
+                
+                <div className='mt-4 flex items-center gap-6'>
+                    
+                    <img src={testImg} className='rounded-full h-12 w-12' alt="" />
+
+                    <div className='relative w-[60%]'>
+                        <input value={newQuestion} onChange={(e) => setNewQuestion(e.target.value)} placeholder='Write a Question ...' className='w-full p-3 border-2 rounded-md' type="text" />
+                        <FiImage className="absolute right-5 top-1/2 transform -translate-y-1/2 h-7 w-7 text-gray-500 cursor-pointer" />
+                    </div>
+
+                    <button disabled={newQuestion.trim() === ""} className="bg-[#FFC200] text-[#002147] text-[18px] font-semibold px-8 py-3 rounded-md disabled:cursor-not-allowed disabled:bg-gray-200">Post</button>
+
+                </div>
+
+            </div>
+
+            )
+
+        }
+
+            <div className='flex flex-col flex-grow'>
+                {selectedTab === "FAQ's" && <FAQS />}
+                {selectedTab === "FAQ's" && <FAQS/> }
+                {selectedTab === "FAQ's" && <FAQS/> }
+                {selectedTab === "FAQ's" && <FAQS/> }
+            </div>
+        
+
+        {
+            selectedTab === "FAQ's" && (
+                
+                <div className="flex pb-4 ml-5">
+
+                    <button  onClick={() => setIsFaqModalOpen(true)} className="text-[#403685] decoration-1 underline-offset-4 text-lg px-6 py-2 rounded-md flex items-center gap-2 hover:bg-[#5345b2] hover:text-white transition duration-300">
+                        Show More FAQs <FiArrowRight className="text-xl" />
+                    </button>
+
+                </div>
+
+            )
+        }
+
+
+        {/* end of faqs place */}
+
+
+
+
+        {/* start of notes place */}
+
+        {
+            selectedTab === "Notes" && (
+                
+                <div className='p-3 flex flex-col gap-4 relative w-[80%]'>
+
+                    <div className='flex w-[80%] ml-28 justify-end'>
+                        <button className='flex text-[#403685] capitalize font-semibold items-center gap-2'><PiExport className='font-semibold' size={22}/> Export to pdf</button>
+                    </div>
+                    
+                    <div className='flex items-center gap-5'>
+                        
+                        <div className='p-3 relative w-[90%]'>
+
+                            <ReactQuill value={noteText} onChange={(value) => setNoteText(value)} className='h-52 mt-2'/>
+
+                            <div className='absolute -bottom-5 right-6 flex gap-4'>
+                                <button onClick={() => setNoteText("")} className='mt-8 bg-[#FFF] text-[#403685] border-2 border-[#403685] text-[16px] font-bold px-8 py-3 rounded-lg disabled:cursor-not-allowed capitalize'>cancel</button>
+                                <button disabled={isQuillEmpty(noteText)} className='mt-8 bg-[#FFC200] text-[#002147] text-[14px] font-semibold px-8 py-3 rounded-lg disabled:cursor-not-allowed disabled:bg-gray-200 capitalize'>add note</button>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <div className='mt-10 mb-5 p-3'>
+
+                        <div className='flex w-[90%] gap-8 flex-col'>
+
+                            {notes.map((note) => (
+
+                                <div key={note.id}>
+
+                                    <div className="flex bg-white rounded-md border-b-2 p-3 pt-4 w-full justify-between">
+
+                                        <div className="flex cursor-pointer items-center gap-4" onClick={() => toggleExpansion(note.id)} >
+
+                                            <IoIosArrowDown size={26}
+                                                style={{
+                                                    transform: expandedNotes[note.id] ? 'rotate(180deg)' : 'rotate(0deg)',
+                                                    transition: 'transform 0.3s ease',
+                                                }}
+                                            />
+
+                                            <span className="font-semibold text-xl text-[#92929D]">{note.title}</span>
+
+                                        </div>
+
+                                        <div className="flex cursor-pointer items-center gap-4">
+                                            <MdEdit onClick={() => handleEditClick(note)} className="text-[#6555BC]" size={28} />
+                                            <MdDeleteForever onClick={() => openDeleteModal(note.id)} className="text-[#FC5A5A]" size={28} />
+                                        </div>
+
+                                    </div>
+
+                                    {expandedNotes[note.id] && (
+
+                                        <div className="bg-white p-8">
+
+                                            {editingNoteId === note.id ? (
+
+                                                <div className='p-4 flex flex-col gap-5'>
+
+                                                    <ReactQuill
+                                                        value={editedContent}
+                                                        onChange={(value) => setEditedContent(value)}
+                                                        className="w-full h-32 mb-8"
+                                                    />
+
+                                                    <div className='flex items-center gap-6'>
+                                                        
+                                                        <button onClick={handleCancelClick} className="mt-2 px-6 bg-[#FC5A5A] text-white rounded-lg p-2">
+                                                            Cancel
+                                                        </button>
+                                                        
+                                                        <button onClick={handleSaveClick} className="mt-2 px-6 bg-[#FFC200] text-[#002147] font-semibold rounded-lg p-2">
+                                                            Save
+                                                        </button>
+                                                        
+                                                    </div>                                                    
+
+                                                </div>
+
+                                            ) : (
+                                                <p className="text-[#000] font-semibold">{note.content}</p>
+                                            )}
+
+                                        </div>
+
+                                    )}
+
+                                </div>
+                                
+                            ))}
+
+                        </div>
+                        
+                        <div className='w-[90%]'>
+                            
+                            <button className="flex items-center mt-8 ml-auto font-semibold text-lg gap-2 text-[#403685] border-0 bg-transparent cursor-pointer">
+                                <span>Show More</span>
+                                <IoIosArrowForward size={20} />
+                            </button>   
+
+                        </div>
+
+                    </div>
+                
+                </div>
+
+            )
+
+        }
+
+        {/* end of notes place */}
+
+
+
+        {/* start of feedback place */}
+
+        {selectedTab === "Feedback" && (
+
+            <div className='p-3 mt-2 flex flex-col gap-4 relative w-[80%]'>
+                
+                <h3 className='text-[#002147] mb-6 font-semibold text-[32px]'>Learner reviews</h3>
+                
+                <div className='flex gap-12 w-full justify-between items-center'>
+
+                    <div className="flex items-center justify-start mb-auto gap-2 text-xl font-semibold">
+                        <FaStar className="text-yellow-400" size={38} />
+                        <span className="text-[#002147]">4.5</span>
+                        <span className="text-[#000] mt-1 text-sm">964 reviews</span>
+                    </div> 
+
+
+                    <div className="w-[40%] space-y-4">
+
+                        {[
+                        { stars: 5, percent: 60 },
+                        { stars: 4, percent: 30 },
+                        { stars: 3, percent: 2.5 },
+                        { stars: 2, percent: 1 },
+                        { stars: 1, percent: 15 },
+                            ].map((rating, index) => (
+                            <div key={index} className="flex items-center gap-3">
+
+                                <span className="text-sm font-semibold min-w-fit">{rating.stars} Stars</span>
+
+                                <div className="w-full h-3 bg-gray-200 rounded-md relative">
+
+                                <div
+                                    className="h-3 bg-[#6555BC] rounded-md"
+                                    style={{ width: `${rating.percent}%` }}
+                                ></div>
+
+                                </div>
+
+                                <span className="text-sm text-gray-600">{rating.percent}%</span>
+
+                            </div>
+
+                        ))}
+
+                    </div>
+
+                    <div className="flex mr-12 mb-auto items-center gap-8">
+                    
+                        <FaFilter size={28}/>
+                      
+                        <select value={ratingType} onChange={(e) => setRatingType(e.target.value)} className="p-2 px-4 border rounded-lg bg-white shadow-sm text-gray-900">
+                    
+                            <option value="" disabled selected>All Rating</option>
+                            <option value="5">5 stars</option>
+                            <option value="4">4 stars</option>
+                            <option value="3">3 stars</option>
+                            <option value="2">2 stars</option>
+                            <option value="1">1 star</option>
+
+                    
+                        </select>
+                    
+                        <select value={sortBy} onChange={(e) => setsortBy(e.target.value)} className="p-2 border rounded-lg bg-white shadow-sm text-gray-900">
+                            <option value="" disabled selected>Sort by : Date</option>
+                            <option value="Newest">Newest</option>
+                            <option value="Oldest">Oldest</option>
+                        </select>
+                    
+                    </div>
+
+                </div>
+
+                <div className='w-full flex flex-col gap-6 mt-5'>
+                    <ReviewCard setIsFeedbackReportModalOpen={setIsFeedbackReportModalOpen} isOwned={true}/>
+                    <hr />
+                    <ReviewCard/>
+                    <hr />
+                    <ReviewCard/>
+
+                </div>
+
+                <button className='ml-auto text-[#403685] text-lg flex gap-1 items-center font-semibold'>Show more <FaAngleRight className='mt-0.5' size={22}/> </button>
+
+            </div>
+
+        )}
+
+        {/* end of feedback place */}
+
+
+
+        {/* start of quizzes place */}
+
+        {selectedTab === "Quiz" && (
+
+            <div className='p-3 mt-2 flex flex-col gap-4 relative w-[80%]'>
+
+                <h3 className='text-[#002147] mb-6 font-semibold text-[30px]'>Course Quizzes</h3>
+
+                {courseLastQuizzes?.quizzes?.map((quiz) => (
+
+                    <div key={quiz?._id} className="flex w-[1000px] items-center bg-white last:mb-6 p-4 rounded-lg shadow-md">
+
+                        <div className="w-16 h-16 flex items-center justify-center bg-purple-100 rounded-lg">
+                            <img src={quizSvg} alt="Quiz Icon" className="w-10 h-10" />
+                        </div>
+
+                        <div className="flex-1 ml-4">
+                            <h3 className="text-lg capitalize text-[#35353A] font-bold">{quiz?.title}</h3>
+                            <p className="text-gray-500 text-sm">{formatDate(quiz?.dueDate)}</p>
+                        </div>
+
+                        <div className="flex items-center mr-36 gap-8 text-gray-600">
+
+                            <div className="text-center">
+                                <p className="text-sm text-[#AFAFAF]">Questions</p>
+                                <p className="font-semibold text-[#002147]">{quiz?.questions?.length}</p>
+                            </div>
+
+                            <div className="text-center">
+                                <p className="text-sm text-[#AFAFAF]">Time To Complete</p>
+                                <p className="font-semibold text-[#002147]">{formatQuizDuration(quiz?.duration)}</p>
+                            </div>
+
+                            <div className="text-center">
+                                <p className="text-sm text-[#AFAFAF]">Grade</p>
+                                <p className="font-semibold text-[#002147]">{quiz?.maxScore}</p>
+                            </div>
+
+                        </div>
+
+                        <YellowBtn onClick={() => navigate(`/quiz-details/${quiz?._id}`)} text="Start" icon={FaArrowRight}/>
+
+
+                    </div>
+
+                ))}
+
+                <div className='flex items-center justify-between p-3 w-[70%]'>
+
+                    <button  
+                        onClick={() => setQuizTabPage((prev) => Math.max(prev - 1, 1))}
+                        disabled={quizTabPage === 1}
+                        className="px-4 py-2 capitalize bg-gray-200 rounded cursor-pointer disabled:cursor-not-allowed disabled:opacity-50" 
+                    >
+                        prev
+                    </button>
+
+                    <span className="font-semibold">
+                        Page {quizTabPage} of {courseLastQuizzes?.totalPages || 1}
+                    </span>
+
+                    <button
+                        onClick={() => setQuizTabPage((prev) => Math.min(prev + 1, courseLastQuizzes?.totalPages))}
+                        disabled={quizTabPage === courseLastQuizzes?.totalPages}
+                        className="px-4 py-2 capitalize bg-gray-200 cursor-pointer disabled:cursor-not-allowed rounded disabled:opacity-50"
+                    >
+                        next
+                    </button>
+
+                </div>
+
+            </div>
+
+        )}
+
+
+        {/* end of quizzes place */}
+
+
+
+        {/* start of assignment place */}
+
+        {selectedTab === "Assignment" && (
+
+            <div className='p-3 mt-2 flex flex-col gap-4 relative w-[80%]'>
+
+                <h3 className='text-[#002147] mb-6 font-semibold text-[30px]'>Course Assignments</h3>
+
+                {assignments.map((assignment) => (
+
+                    <div key={assignment.id} className="flex w-[800px] items-center bg-white last:mb-6 p-4 rounded-lg shadow-md">
+
+                        <div className="w-16 h-16 flex items-center justify-center bg-purple-100 rounded-lg">
+                            <img src={assignmentSvg} alt="Quiz Icon" className="w-10 h-10" />
+                        </div>
+
+                        <div className="flex-1 flex items-center gap-16 ml-4">
+
+                            <div>
+                                <h3 className="text-lg text-[#35353A] font-bold">{assignment.title}</h3>
+                                <p className="text-gray-500 text-sm">{assignment.date}</p>
+                            </div>
+
+                            <div className="text-center">
+                                <p className="text-sm text-[#AFAFAF]">Grade</p>
+                                <p className="font-semibold text-[#002147]">{assignment.grade}</p>
+                            </div>
+
+                        </div>
+
+                        {/* <div className="flex items-center mr-36 gap-8 text-gray-600">
+
+                            <div className="text-center">
+                                <p className="text-sm text-[#AFAFAF]">Grade</p>
+                                <p className="font-semibold text-[#002147]">{quiz.grade}</p>
+                            </div>
+
+                        </div> */}
+
+                        <YellowBtn onClick={() => navigate(`/view-assignment-details/${assignment.id}/21231231414`)} text="View" icon={FaArrowRight}/>
+
+                    </div>
+
+                ))}
+
+            </div>
+
+        )}
+
+        {/* end of assignment place */}
+
+
+
+
+        {/* start of reminder place */}
+
+        {selectedTab === "Reminder" && (
+
+            <div className='p-3 mt-2 flex flex-col gap-4 relative w-[80%]'>
+                
+                <div className='flex w-[1500px] items-center justify-between'>
+
+                    <h3 className='text-[#002147] font-semibold text-[30px]'>Course Reminders</h3>
+
+                    {reminders.length > 0 && <div className='flex items-center gap-5 justify-end'>
+
+                        <select value={reminderFilter} onChange={(e) => setReminderFilter(e.target.value)} name="sort" className="border px-3 w-[250px] py-2 rounded-lg">
+                    
+                            <option value="" selected disabled>Sort By Type</option>
+
+                            <option value="Daily" selected disabled>Daily</option>
+                            <option value="Weekly" selected disabled>Weekly</option>
+                            <option value="Once" selected disabled>Once</option>
+
+                        </select>
+
+                        <YellowBtn onClick={() => setIsCourseReminderModalOpen(true)} text={"Add course reminder"} icon={FaPlus} />
+
+                    </div>}
+
+                </div>
+
+                {
+                    reminders.length === 0 && <div className="flex flex-col items-center justify-center p-6">
+
+                    <div className="p-6 rounded-lg text-center max-w-md">
+
+                        <div className="flex justify-center mb-4">
+                            <img src={reminderSvg} alt="Reminder Icon" className="w-32 h-32" />
+                        </div>
+
+                        <h2 className="text-xl font-semibold text-[#002147]">Set Course Reminders !</h2>
+
+                        <p className="text-[#797979] mt-2">
+                            Keep track of your studies, stay organized, and receive timely alerts for important deadlines.
+                        </p>
+
+                        <div className='flex items-center justify-center'>
+                            <button onClick={() => setIsCourseReminderModalOpen(true)} className="mt-4 flex items-center gap-2 bg-[#ECEBFE] text-[#403685] px-4 py-2 rounded-lg font-semibold transition">
+                                <FaPlus /> Add Course Reminder
+                            </button>
+                        </div>
+
+                    </div>
+
+                    </div>
+                }
+
+                {
+                    reminders.length > 0 && (
+
+                        <div className="max-w-[80%] space-y-6 p-4 rounded-lg">
+
+                            {reminders.map((reminder) => (
+
+                                <div
+                                    key={reminder.id}
+                                    className="flex items-start p-4 bg-white rounded-lg shadow-md relative"
+                                >
+
+                                <div className={`${getColor(reminder.type)} w-2 h-full absolute left-0 top-0 rounded-l-lg`} />
+
+                                    <div className="ml-4 flex-1">
+
+                                        <p className="text-gray-700 font-medium">{reminder.title}</p>
+
+                                        <div className="flex items-center text-gray-500 mt-2">
+
+                                        <span className="mr-2">
+                                            <FaClock className='text-[#6555BC]'/>
+                                        </span>
+
+                                        <span>{reminder.time}</span>
+
+                                        {reminder.type === "weekly" && (
+
+                                            <div className="ml-5 flex space-x-2">
+                                                {reminder.days.map((day) => (
+                                                    <span
+                                                        key={day}
+                                                        className="px-2 py-1 bg-gray-200 rounded-lg text-sm text-gray-700"
+                                                    >
+                                                        {day}
+                                                    </span>
+                                                ))}
+
+                                            </div>
+
+                                        )}
+
+                                        {reminder.type === "one-time" && (
+                                            <span className="ml-4 flex items-center">
+                                                <FaCalendarAlt className='text-[#6555BC]0'/> <span className="ml-1">{reminder.date}</span>
+                                            </span>
+                                        )}
+
+                                        </div>
+
+                                    </div>
+                                    
+                                    <div className='flex items-center gap-3'>
+                                        <button className="ml-2"><MdModeEdit className='text-[#6555BC]' size={22}/></button>
+                                        <button className="ml-2"><MdDelete className='text-red-500' size={22}/></button>
+                                    </div>
+
+                                </div>
+
+                            ))}
+
+                        </div>
+                    ) 
+
+                }
+
+            </div>
+
+        )}
+
+        {/* end of reminder place */}
+
+
+      </div>
+
+
+
+      {/* Right Sidebar - Modules List */}
+      {/* min-h-max */}
+      <div className="w-1/4 p-6 h-full bg-white shadow-lg rounded-md">
+
+      {course?.sections?.map((section , sectionIndex) => {
+
+        return (
+
+            <div key={section?._id} className='bg-white border-b w-full border-gray-300 p-4'>
+
+                <div onClick={() => toggleSection(section?._id)} className='flex justify-between cursor-pointer items-center'>
+
+                    <div className='flex cursor-pointer flex-col gap-2'>
+                    
+                        <span className='font-semibold text-[18px]' onClick={async () => {
+                            try {
+                                toggleSection(section?._id)
+                            } catch (error) {
+                                console.log(error)
+                            }
+                        }}>
+                            Module {sectionIndex + 1} : {section?.name}
+                        </span>
+
+                        <div className="section-info text-[18px] text-gray-600">
+
+                            {section?.items?.length} <span className='mr-2'>Lessons</span>
+
+                            <span className="text-[#403685] font-semibold">
+                                {formatTimeWithLabels(getTotalTime(section?.items || []))}
+                            </span>  
+
+                        </div>
+
+                    </div>
+
+                    <FaAngleDown className={`mb-6 transition-transform duration-300 ${expandedSections.includes(section?._id) ? 'transform rotate-180' : ''}`} size={25}/>
+                
+                </div>
+
+                {expandedSections?.includes(section?._id) && (
+                    
+                    <div className='w-full flex flex-col gap-3'>
+
+                        {section?.items?.map((item , itemIndex) => (
+
+                            <div key={item?._id} className='flex cursor-pointer justify-between items-center w-full mt-4'
+                                onClick={async () => {
+                                    try {
+                                        selectAttachment(sectionIndex , itemIndex)
+                                        handleAttachmentClick(item?.attachments[0]?._id , item)
+                                        await incrementAttachmentView({token , courseId , sectionId : section?._id , attachmentId : item?.attachments[0]?._id})
+                                    } catch (error) {
+                                        console.log(error)
+                                    }
+                                }} 
+                            >
+
+                                <div className='flex mt-2 items-center gap-4'>
+                                    {getItemIcon(item?.type)}
+                                    <span className='font-semibold text-[18px]'>{item?.name}</span>
+                                </div>
+
+                                <span className='ml-auto text-[18px] font-semibold mr-2 text-gray-600'>{formatTimeWithLabels(item?.estimatedTime)}</span>
+                            
+                            </div>
+
+                        ))}
+
+                    </div>
+
+                )}
+
+            </div>
+
+        )
+
+        })}
+
+      </div>
+
+        <FaqModal isOpen={isFaqModalOpen} onClose={() => setIsFaqModalOpen(false)} />
+
+        <DeleteNoteModal 
+            isOpen={deleteNoteId !== null} 
+            onClose={closeDeleteModal} 
+            onDelete={handleDelete} 
+        />
+
+        {isCourseRateModalOpen && <CourseRatePopUp onClose={() => setIsCourseRateModalOpen(false)} />}
+        {isFeedbackReportModalOpen && <ReportFeedbackPopUp onClose={() => setIsFeedbackReportModalOpen(false)} />}
+        {isCourseReminderModalOpen && <CourseReminderModal onClose={() => setIsCourseReminderModalOpen(false)} />}
+
+    </div>
+
+    )
+    
+}
+
+
+
+export default EnrolledCourse
+
+
+
+
+// !add this when there is real data fetch useEffect to check if the usre is enrolled in the course or not , to ensure only enrolled students can access the course content page
+
+// useEffect(() => {
+//     // Check if the user is enrolled in the course
+//     const checkEnrollment = async () => {
+//       try {
+//         const response = await fetch(`/api/checkEnrollment/${courseId}`, {
+//           headers: { Authorization: `Bearer ${token}` },
+//         });
+//         const data = await response.json();
+//         if (!data.enrolled) {
+//           navigate(`/courses/single-course/${courseId}`);
+//         }
+//       } catch (error) {
+//         setError('Error checking enrollment');
+//       }
+//     };
+  
+//     if (courseId && token) {
+//       checkEnrollment();
+//     }
+//   }, [courseId, token, navigate]);

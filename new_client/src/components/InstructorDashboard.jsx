@@ -1,0 +1,238 @@
+import React from 'react'
+import bookIcon from "../assets/book-icon.png" 
+import totalStudents from "../assets/total_students.svg"
+import evaluation from "../assets/evaluation.svg"
+import CircularProgressIcon from './CircularProgressIcon'
+import courseImg from "../assets/hd-course-image.jpg"
+import stdImg from "../assets/instructor_img.png"
+import { BsPeopleFill } from "react-icons/bs";
+import { FaEye } from "react-icons/fa";
+import { useNavigate } from 'react-router-dom'
+import { FaAngleRight } from "react-icons/fa6";
+import { FaAngleLeft } from "react-icons/fa6";
+import YellowBtn from './YellowBtn'
+
+
+
+const InstructorDashboard = () => {
+
+    const navigate = useNavigate()
+
+
+  return (
+    <div className='w-full p-10'>
+
+        <h3 className='text-[#002147] font-semibold text-3xl'>Overview</h3>
+
+        <div className="flex items-center justify-center md:justify-normal flex-wrap gap-12 mb-8 mt-8">
+
+            <div className="p-4 w-[430px] bg-[#FFF] shadow rounded-lg flex justify-between items-center">
+
+                <div className="flex flex-col gap-3">
+                    <h3 className="text-[18px] md:text-[22px] lg:text-[26px] text-[#403685] font-semibold">Total Courses</h3>
+                    <p className="text-[20px] md:text-[24px] lg:text-[28px] font-bold text-[#403685]">3</p>
+                </div>
+
+                <CircularProgressIcon staticNumber={3} color={"#FFC200"} icon={bookIcon} />
+
+            </div>
+
+            <div className="p-4 w-[430px] bg-[#FFF] shadow rounded-lg flex justify-between items-center">
+
+                <div className="flex flex-col gap-3">
+                    <h3 className="text-[18px] md:text-[22px] lg:text-[26px] text-[#403685] font-semibold">Total Student</h3>
+                    <p className="text-[20px] md:text-[24px] lg:text-[28px] font-bold text-[#403685]">80</p>
+                </div>
+
+                <CircularProgressIcon className="mr-1" staticNumber={80} color={"#FFC200"} icon={totalStudents} />
+
+            </div>
+
+            <div className="p-4 w-[430px] bg-[#FFF] shadow rounded-lg flex justify-between items-center">
+
+                <div className="flex flex-col gap-3">
+                    <h3 className="text-[18px] md:text-[22px] lg:text-[26px] text-[#403685] font-semibold">Pending Evaluation</h3>
+                    <p className="text-[20px] md:text-[24px] lg:text-[28px] font-bold text-[#403685]">37</p>
+                </div>
+
+                <CircularProgressIcon staticNumber={37} color={"#FFC200"} icon={evaluation} />
+
+            </div>
+
+            <div className="p-4 w-[430px] bg-[#FFF] shadow rounded-lg flex justify-between items-center">
+
+                <div className="flex flex-col gap-3">
+                <h3 className="text-[18px] md:text-[22px] lg:text-[26px] text-[#403685] font-semibold">Unread Messages</h3>
+                <p className="text-[20px] md:text-[24px] lg:text-[28px] font-bold text-[#403685]">5</p>
+                </div>
+
+                <CircularProgressIcon staticNumber={5} color={"#FFC200"} icon={bookIcon} />
+
+            </div>
+
+        </div>
+
+        <div className="grid mt-10 grid-cols-2 w-full">
+
+            <div className=" p-4 rounded-lg">
+
+                <div className="flex mb-4 mt-4 w-[80%] justify-between items-center">
+
+                    <h2 className="text-2xl text-[#002147] font-semibold">Teaching Courses</h2>
+                    <button onClick={() => navigate("/instructor/courses")} className="text-[#403685] text-xl font-semibold">View All Courses &gt;</button>
+
+                </div>
+
+                <div className="mt-4 space-y-5">
+
+                    {[1, 2].map((course) => (
+
+                    <div key={course} className="flex cursor-pointer items-center w-[80%] bg-white p-3 rounded-lg">
+
+                        <img
+                            src={courseImg}
+                            alt="Course"
+                            className="w-[110px] h-[85px] rounded-md mr-3"
+                        />
+
+                        <div className='ml-8'>
+                            <p className="text-[#002147] text-lg font-semibold">Art Course</p>
+                            <p className="text-md mt-2 flex items-center gap-2 text-[#002147]"><BsPeopleFill size={22}/> Student Enrolled: 351</p>
+                        </div>
+
+                        <button onClick={() => navigate(`/instructor/course/structure/${2314141541}`)} className="text-[#403685] text-md ml-auto mr-10 font-semibold">View Course &gt;</button>
+
+                    </div>
+
+                    ))}
+
+                </div>
+            
+            </div>
+
+            <div className="p-4  rounded-lg mt-4">
+
+                <div className="flex mb-4 justify-between items-center">
+                    <h2 className="text-2xl text-[#002147] font-semibold">Student List</h2>
+                </div>
+
+                <table className="w-[800px] bg-white mt-3 text-left text-sm">
+
+                    <thead>
+
+                        <tr className="text-[#101018] font-semibold h-[60px] border-b">
+                            <th className="py-2 text-lg p-2">Student Name</th>
+                            <th className="py-2 text-lg p-2">Course Name</th>
+                            <th className="py-2 text-lg p-2">Status</th>
+                            <th className="py-2 text-lg p-2">Action</th>
+                        </tr>
+
+                    </thead>
+
+                    <tbody className='p-2'>
+
+                        {[
+                            { name: "Dulce Kenter", course: "Motion Design", status: "On Track", color: "text-[#FFC200]" },
+                            { name: "Ruben Korsgaard", course: "UX Research", status: "Needs Attention", color: "text-[#FF0004]" },
+                            { name: "Jordyn Torff", course: "C++", status: "Completed", color: "text-[#14AE5C]" },
+                        ].map((student, index) => (
+                            <tr key={index} className="border-b h-[60px] p-2">
+
+                                <td className="py-2 flex items-center gap-2 p-2">
+                                    <img src={stdImg} className='h-10 w-10 rounded-full' alt="" />
+                                    <span className='text-[#35353A] font-semibold'>{student.name}</span>
+                                </td>
+                                <td className='text-[#35353A] font-semibold'>{student.course}</td>
+                                <td className={`${student.color} font-medium`}>{student.status}</td>
+
+                                <td className="flex mb-2 p-2 text-blue-500">
+                                    <FaEye onClick={() => navigate(`/instructor/course/enrolled-students/${6465768797}`)} className="cursor-pointer" size={22}/>
+                                </td>
+
+                            </tr>
+
+                        ))}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+        
+        <div className="grid mt-16 grid-cols-2 p-2 w-full">
+            
+            <div className="bg-white p-4 px-6 rounded-xl shadow-md w-full max-w-4xl">
+                
+                <div className="flex justify-between items-center pb-3 border-b border-gray-200">
+                    <h2 className="text-lg font-bold">WEEK 1</h2>
+                    <div className='flex items-center gap-3'>
+                        <FaAngleLeft className='cursor-pointer' size={22}/>
+                        <FaAngleRight className='cursor-pointer'   size={22}/>
+                    </div>
+                    <div className="text-[#808080] font-medium">1-5 JAN</div>
+                </div>
+
+                <div className="grid grid-cols-5 gap-2 mt-4">
+
+                    {[1, 2, 3, 4, 5].map((day) => (
+
+                    <div
+                        key={day}
+                        className={`relative p-4 h-52 border rounded-lg flex items-start justify-center ${
+                        day === 1 ? "bg-gray-200" : "bg-white"
+                        }`}
+                    >
+                        <span className="text-lg font-bold text-gray-700">{day}</span>
+
+                    </div>
+
+                    ))}
+
+                </div>
+                
+            </div>
+
+            <div className="p-4 rounded-lg mt-6 w-[80%]">
+
+                <div className="flex  justify-between items-center">
+                    <h2 className="text-2xl text-[#002147] font-semibold">Undergoing Review</h2>
+                    <button className="text-[#4036851] font-semibold text-lg">View All &gt;</button>
+                </div>
+
+                <div className="mt-4 space-y-3">
+
+                    {[1, 2].map((assignment) => (
+
+                    <div key={assignment} className="flex items-center p-3 rounded-lg">
+
+                        <div className="w-10 h-10 bg-yellow-300 rounded-lg mr-3"></div>
+
+                        <div>
+                            <p className="font-medium">UX Design Assignment 1</p>
+                            <p className="text-sm text-gray-500">Student Name: Ahmad Ali</p>
+                        </div>
+                        
+                        <p className="ml-auto mr-5 text-gray-500 text-sm">Deadline: March 5, 2025</p>
+                        <YellowBtn onClick={() => navigate(`/instructor/assigment/757575858/12312411/student`)} text="Grade"/>
+
+                    </div>
+
+                    ))}
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+    </div>
+  )
+
+}
+
+
+
+export default InstructorDashboard
