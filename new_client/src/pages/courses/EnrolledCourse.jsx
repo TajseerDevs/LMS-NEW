@@ -893,7 +893,7 @@ const EnrolledCourse = () => {
 
 
         {/* start of quizzes place */}
-        {/* add empty quiz length case , pagination */}
+        {/* add empty quiz length case , pagination , loading */}
         {selectedTab === "Quiz" && (
 
             <div className='p-3 mt-2 flex flex-col gap-4 relative w-[80%]'>
@@ -973,7 +973,7 @@ const EnrolledCourse = () => {
 
 
         {/* start of assignment place */}
-        {/* pagination */}
+        {/* pagination , loading cases */}
         
         {selectedTab === "Assignment" && (
 

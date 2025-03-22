@@ -41,7 +41,8 @@ const {
     getStudentProgress,
     enrollFreeCourse,
     checkFeedbackStatus,
-    getStudentEnrolledCourses
+    getStudentEnrolledCourses,
+    getStudentGrades
 } = require("../controllers/student.controller")
 
 
@@ -101,6 +102,8 @@ router.get("/bookmarks" , protectRoutes , getBookMarks)
 
 
 router.post('/generate-certificate/:courseId' , protectRoutes , generateCertificate)
+
+router.get("/grades" , protectRoutes , getStudentGrades) // grades here will be quizzes , assignments
 
 
 

@@ -55,6 +55,13 @@ const studentApi = createApi({
         headers: { Authorization: `Bearer ${token}` },
       }),
     }),
+    getStudentGrades: builder.query({
+      query: ({token , page}) => ({
+        url: `/grades?page=${page}`,
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    }),
     enrollFreeCourse: builder.mutation({
       query: ({token , courseId}) => ({
         url: `/enroll-free/${courseId}`,
@@ -75,7 +82,8 @@ const {
   useGetStudentProgressQuery ,
   useGetCourseCompletionPercentageQuery ,
   useCheckFeedbackStatusQuery ,
-  useEnrollFreeCourseMutation
+  useEnrollFreeCourseMutation ,
+  useGetStudentGradesQuery
 } = studentApi
 
  
@@ -90,5 +98,6 @@ export {
   useGetCourseCompletionPercentageQuery ,
   useCheckFeedbackStatusQuery ,
   useEnrollFreeCourseMutation ,
+  useGetStudentGradesQuery ,
   studentApi ,
 }

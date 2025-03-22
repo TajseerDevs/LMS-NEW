@@ -226,6 +226,32 @@ const createAssignment = async (req , res , next) => {
 
 
 
+const checkAssignmentDueDate = async (req , res , next) => {
+
+  try {
+    
+    const { assignmentId } = req.params
+        
+    const assignment = await Assignment.findById(assignmentId)
+    
+    if (!assignment) {
+      return next(createError(`Assignment with this id ${assignmentId} not exist` , 404))
+    }
+
+    const currentDate = new Date()
+    const isDuePassed = currentDate > assignment.dueDate
+
+    res.status(200).json({ isDuePassed })
+
+  } catch (error) {
+    next(error)  
+  }
+
+}
+
+
+
+
 const getStudentAssigmentsSubmissions = async (req , res , next) => {
 
   try {
@@ -341,6 +367,12 @@ const submitAssignmentSubmission = async (req , res , next) => {
         const fileType = submissionFile.mimetype
         const fileSize = submissionFile.size
 
+        const answerText = req.body["answerText"]?.trim() || null
+
+        if (answerText !== null && answerText.length < 1) {
+          return next(createError("Assignment answer must be more than one char", 400))
+        }
+
         const file = new File({
           originalName: submissionFile.name,
           uniqueName: fileName,
@@ -358,6 +390,7 @@ const submitAssignmentSubmission = async (req , res , next) => {
           assignmentId,
           studentId : studentDocObj._id ,
           submissionFile: file._id,
+          answerText 
         })
       
         await submission.save()
@@ -376,6 +409,136 @@ const submitAssignmentSubmission = async (req , res , next) => {
     }
 
 }
+
+
+
+
+const updateSubmission = async (req , res , next) => {
+
+  try {
+    
+    const { assignmentId , submissionId } = req.params;
+
+    const submissionFile = req.files?.submissionFile
+    const answerText = req.body["answerText"]?.trim() || null
+
+    const studentDocObj = await Student.findOne({ userObjRef : req.user._id })
+
+    if(!studentDocObj) {
+      return next(createError("student not found" , 404))
+    }
+
+    if (answerText !== null && answerText.length < 1) {
+      return next(createError("Assignment answer must be more than one char", 400))
+    }
+    
+    let submission = await Submission.findOne({ assignmentId , _id : submissionId , studentId : studentDocObj._id }).populate('submissionFile')
+
+    if (!submission) {
+      return next(createError("Previous Submission not exist" , 404))
+    }
+
+    if (submissionFile) {
+
+      const uploadDir = path.join(__dirname, "../uploads/submissions")
+
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true })
+      }
+
+      const fileName = `${Date.now()}-${submissionFile.name}`
+      const filePath = path.join(uploadDir, fileName)
+
+      if (submission.submissionFile) {
+
+        const oldFile = await File.findById(submission.submissionFile._id)
+
+        if (oldFile) {
+
+          const oldFilePath = path.join(__dirname, "..", "uploads", "submissions", oldFile.uniqueName)
+            
+          if (fs.existsSync(oldFilePath)) {
+            fs.unlinkSync(oldFilePath)
+          }
+
+          await oldFile.deleteOne()
+
+        }
+
+      }
+
+      const file = new File({
+        originalName: submissionFile.name,
+        uniqueName: fileName,
+        filePath,
+        fileType: submissionFile.mimetype,
+        fileSize: submissionFile.size,
+        user: req.user._id,
+      })
+
+      await submissionFile.mv(filePath)
+      await file.save()
+
+      submission.submissionFile = file._id
+
+    }
+
+    if (answerText) {
+      submission.answerText = answerText
+    }
+
+    const updatedSubmission = await submission.save()
+
+    return res.status(200).json({
+      message: 'Submission updated successfully' ,
+      submission: updatedSubmission ,
+    })
+
+  } catch (error) {
+    next(error)
+  }
+
+}
+
+
+
+
+const getAssignmentSubmission = async (req , res , next) => {
+
+  try {
+    
+    const { assignmentId } = req.params
+
+    const studentDocObj = await Student.findOne({ userObjRef: req.user._id })
+
+    if (!studentDocObj) {
+      return next(createError("Student not found", 404))
+    }
+
+    const submission = await Submission.findOne({
+      assignmentId,
+      studentId: studentDocObj._id,
+    }).populate("submissionFile"  , "-filePath -fileSize -fileType")
+
+    if (!submission) {
+      return res.status(200).json({ msg : "This assignment has no previous submission" })
+    }
+
+    const submissionFile = submission.submissionFile
+
+    
+    if (submissionFile) {
+      const filePath = `/uploads/submissions/${submissionFile.uniqueName}`      
+      submissionFile.filePath = filePath
+    }
+
+    res.status(200).json(submission)
+
+  } catch (error) {
+    next(error)
+  }
+
+} 
 
 
 
@@ -833,8 +996,11 @@ module.exports = {
   getCourseLatestAssignments ,
   getInstructorAssigments ,
   createAssignment , 
+  checkAssignmentDueDate ,
   getStudentAssigmentsSubmissions ,
   submitAssignmentSubmission , 
+  updateSubmission ,
+  getAssignmentSubmission ,
   viewStudentSubmission , 
   addMarksToSubmission ,
   updateAssignmentSubmission ,

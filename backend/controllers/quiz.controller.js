@@ -828,7 +828,6 @@ const getInstructorQuizzes = async (req , res , next) => {
 
 
 // ! needs some update to check if there is an existing quiz result document object 
-// بعد رمضان 🔔
 const submitQuizAnswers = async (req , res , next) => {
 
   try {

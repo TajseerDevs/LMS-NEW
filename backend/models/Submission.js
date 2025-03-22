@@ -26,6 +26,10 @@ const submissionSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    isGraded: {
+      type: Boolean,
+      default: false,
+    },
     answerText: {
       type: String,
       default: "",

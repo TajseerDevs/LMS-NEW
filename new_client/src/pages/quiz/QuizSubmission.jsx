@@ -59,13 +59,13 @@ const QuizSubmission = () => {
 
 
 
-
+  // ! TODO it needs more testing
   useEffect(() => {
     if(submitted){
       localStorage.removeItem(`timer-time-left-${quizId}`)
       setTimeout(() => {
         navigate(`/quiz-result/${quizId}`)
-      }, 100)
+      }, 200)
     }
   } , [submitted , quizId , token , navigate])
 

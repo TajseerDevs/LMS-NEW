@@ -14,6 +14,13 @@ const assigmentApi = createApi({
         body: formData,
       }),
     }),
+    checkAssignmentDueDate: builder.query({
+      query: ({ token , assignmentId }) => ({
+        url: `/check-due-date/${assignmentId}`,
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    }),
     getInstructorAssigments: builder.query({
       query: ({ token }) => ({
         url: `/instructor`,
@@ -35,6 +42,29 @@ const assigmentApi = createApi({
         headers: { Authorization: `Bearer ${token}` },
       }),
     }),
+    submitAssignmentSubmission: builder.mutation({
+      query: ({ assignmentId, courseId, formData, token }) => ({
+        url: `/${courseId}/${assignmentId}/submit`,
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      }),
+    }),
+    updateSubmission: builder.mutation({
+      query: ({ assignmentId , submissionId , formData, token }) => ({
+        url: `/update-submission/${assignmentId}/${submissionId}`,
+        method: "PUT",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      }),
+    }),
+    getAssignmentSubmission : builder.query({
+      query: ({ token , assignmentId }) => ({
+        url: `/submission/${assignmentId}`,
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    }),
   }),
 })
 
@@ -42,17 +72,25 @@ const assigmentApi = createApi({
 
 const { 
   useCreateAssignmentMutation ,
+  useCheckAssignmentDueDateQuery ,
   useGetInstructorAssigmentsQuery ,
   useGetCourseLatestAssignmentsQuery ,
-  useGetAssignmentDetailsQuery
+  useGetAssignmentDetailsQuery,
+  useSubmitAssignmentSubmissionMutation ,
+  useGetAssignmentSubmissionQuery ,
+  useUpdateSubmissionMutation
 } = assigmentApi
 
 
 
 export {
   useCreateAssignmentMutation ,
+  useCheckAssignmentDueDateQuery ,
   useGetInstructorAssigmentsQuery ,
   useGetCourseLatestAssignmentsQuery ,
   useGetAssignmentDetailsQuery ,
+  useSubmitAssignmentSubmissionMutation ,
+  useGetAssignmentSubmissionQuery ,
+  useUpdateSubmissionMutation ,
   assigmentApi,
 }

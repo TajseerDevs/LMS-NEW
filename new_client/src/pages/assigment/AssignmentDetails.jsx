@@ -2,7 +2,7 @@ import React from 'react'
 import { FaArrowLeft } from "react-icons/fa6";
 import { useNavigate, useParams } from 'react-router-dom';
 import YellowBtn from '../../components/YellowBtn';
-import { useGetAssignmentDetailsQuery } from '../../store/apis/assigmentApis';
+import { useCheckAssignmentDueDateQuery, useGetAssignmentDetailsQuery } from '../../store/apis/assigmentApis';
 import { useSelector } from 'react-redux';
 import formatDate from '../../utils/formatDate';
 import { daysUntilDueDate } from '../../utils/daysUntilDueDate';
@@ -19,6 +19,7 @@ const AssignmentDetails = () => {
     const navigate = useNavigate()
 
     const {data : assignment , isLoading} = useGetAssignmentDetailsQuery({token , assignmentId})
+    const {data : assignmentDateCheck , isLoading : isLoadingDateCheck} = useCheckAssignmentDueDateQuery({token , assignmentId})
 
 
     const downloadFile = (filePath) => {
@@ -35,8 +36,8 @@ const AssignmentDetails = () => {
     }
 
   
-    if(isLoading){
-        return <h1>Loading ...</h1>
+    if(isLoading || isLoadingDateCheck){
+        return <h1 className='p-10'>Loading ...</h1>
     }
 
 
@@ -76,7 +77,7 @@ const AssignmentDetails = () => {
     
                         <span className='text-[#002147] font-semibold text-xl'>Assignment Instruction</span>
     
-                        <div dangerouslySetInnerHTML={{ __html: assignment.description }} className='w-[80%] mt-4 text-[#000000] text-xl' />
+                        <div dangerouslySetInnerHTML={{ __html: assignment?.description }} className='w-[80%] mt-4 text-[#000000] text-xl' />
     
                     </div>
     
@@ -90,9 +91,9 @@ const AssignmentDetails = () => {
 
                             <button 
                                 className="text-[#403685] font-semibold mb-2 text-xl underline relative"
-                                onClick={() => downloadFile(assignment.file.filePath)}
+                                onClick={() => downloadFile(assignment?.file?.filePath)}
                             >
-                                {assignment.file.originalName}
+                                {assignment?.file?.originalName}
                             </button>
 
                             <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 
@@ -108,7 +109,7 @@ const AssignmentDetails = () => {
                 </div>
     
                 <div className='p-6 flex items-end justify-end '>
-                    <YellowBtn onClick={() => navigate(`/submit-assignment-submission/${assignmentId}/${courseId}`)} text="Start Assignment Submit" />
+                   {assignmentDateCheck?.isDuePassed ? <YellowBtn onClick={() => navigate(`/student-grades`)} text="View Grades" /> : <YellowBtn onClick={() => navigate(`/submit-assignment-submission/${assignmentId}/${courseId}`)} text="Start Assignment Submit" />}
                 </div>
     
             </div> 

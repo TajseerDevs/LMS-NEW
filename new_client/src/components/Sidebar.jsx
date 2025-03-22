@@ -16,6 +16,8 @@ import { IoChatboxEllipsesSharp } from "react-icons/io5";
 import { IoCreate } from "react-icons/io5";
 import { SiQuizlet } from "react-icons/si";
 import { CgProfile } from "react-icons/cg";
+import enrolledIcon from "../assets/enrolled-icon.svg"
+import { BsFillFileEarmarkSpreadsheetFill } from "react-icons/bs";
 
 
 
@@ -100,7 +102,7 @@ const Sidebar = ({ openSideBar , setopenSideBar }) => {
                                 </li>
  
                                 <li className={`flex items-center text-[#403685] py-2 cursor-pointer ${location.pathname === '/enrolled-courses' ? 'text-yellow-500' : 'hover:text-blue-500'}`}>
-                                    <MdGridView className={`${openSideBar ? "w-7 h-7" : "w-6 h-6"} mr-3`} />
+                                    <img src={enrolledIcon} className={`${openSideBar ? "w-7 h-7" : "w-6 h-6"} font-semibold mr-3`} />
                                     <Link to="/enrolled-courses">Enrolled Courses</Link>
                                 </li>
 
@@ -152,6 +154,11 @@ const Sidebar = ({ openSideBar , setopenSideBar }) => {
                     {user?.user?.role === "student" && 
                         (
                             <>
+                                <li onClick={() => setopenSideBar(false)} className={`rounded py-2 px-3 cursor-pointer text-[#403685] flex items-center ${location.pathname === '/student-grades' ? 'text-yellow-500' : 'hover:bg-gray-100'}`}>
+                                    <BsFillFileEarmarkSpreadsheetFill className={`${openSideBar ? "w-7 h-7" : "w-6 h-6"} mr-3`} />
+                                    {!openSideBar && <Link to="/student-grades" className="ml-3">Grades</Link>}
+                                </li>
+                                
                                 <li onClick={() => setopenSideBar(false)} className={`rounded py-2 px-3 cursor-pointer text-[#403685] flex items-center ${location.pathname === '/certificate' ? 'text-yellow-500' : 'hover:bg-gray-100'}`}>
                                     <FaCertificate className={`${openSideBar ? "w-7 h-7" : "w-6 h-6"} mr-3`} />
                                     {!openSideBar && <Link to="/certificate" className="ml-3">My Certificate</Link>}

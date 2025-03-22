@@ -16,6 +16,9 @@ const path = require("path")
 const fs = require('fs');
 const Instructor = require("../models/Instructor");
 const Enrollment = require("../models/Enrollment");
+const QuizResult = require("../models/QuizResult");
+const Submission = require("../models/Submission");
+const { getQuizComment , getAssignmentComment } = require("../utils/getGradesFeedback");
 // const { PDFDocument } = require('pdf-lib');
 
 
@@ -1296,6 +1299,89 @@ const generateCertificate = async (req , res , next) => {
 
 
 
+
+const getStudentGrades = async (req , res , next) => {
+  
+  try {
+    
+    const page = Number(req.query.page) || 1
+    const limit = 10
+
+    const startIndex = (page - 1) * limit
+    const endIndex = page * limit
+
+    const studentDocObj = await Student.findOne({userObjRef : req.user._id})
+
+    if(!studentDocObj){
+      return next(createError("Student not exist" , 404))
+    }
+
+
+    const quizResults = await QuizResult.find({ studentId : studentDocObj._id })
+    .populate("courseId", "title")
+    .populate("quizId", "title")
+    .sort({ createdAt: -1 })
+
+    const submissions = await Submission.find({ studentId : studentDocObj._id , isGraded : true })
+    .populate({
+      path: "assignmentId",
+      select: "title mark courseId",
+      populate: {
+        path: "courseId", 
+        select: "title",
+      },
+    }).sort({ submittedAt: -1 })
+
+
+    const shuffleArray = (array) => {
+      for (let i = array.length - 1; i > 0; i--) {
+        let j = Math.floor(Math.random() * (i + 1))
+        ;[array[i], array[j]] = [array[j], array[i]]
+      }
+      return array
+    }
+
+
+    const formattedResults = [
+      ...quizResults.map((quiz) => ({
+        course: quiz.courseId.title,
+        type: `Quiz: ${quiz.quizId.title}`,
+        grade: `${quiz.totalScore}/${quiz.maxPossibleScore}`,
+        status: getQuizComment(quiz.totalScore , quiz.maxPossibleScore , quiz.passStatus),
+        comment : quiz.passStatus ? "Great Work" : "Keep Going"
+      })),
+      ...submissions.map((submission) => ({
+        course: submission.assignmentId.courseId.title,
+        type: `Assignment: ${submission.assignmentId.title}`,
+        grade: submission.isGraded ? `${submission.marks}/${submission.assignmentId.mark}` : "Not Graded",
+        status: submission.isGraded ? getAssignmentComment(submission.marks , submission.assignmentId.mark) : "Not Graded",
+        comment: submission.feedback || "No feedback yet",
+      }))
+    ]
+
+
+    const randomizedResults = shuffleArray(formattedResults)
+
+    const totalRecords = randomizedResults.length
+    const totalPages = Math.ceil(totalRecords / limit)
+
+    const paginatedResults = formattedResults.slice(startIndex , endIndex)
+
+    res.status(200).json({
+      currentPage: page,
+      totalPages,
+      totalRecords,
+      results: paginatedResults,
+    })
+
+  } catch (error) {
+    next(error)
+  }
+
+}
+
+
+
 // ! use node-schedule library
 const addReminder = async (req, res, next) => {
 
@@ -2501,6 +2587,7 @@ module.exports = {
   getBookMarks,
   addToBookMark,
   generateCertificate ,
+  getStudentGrades ,
   addReminder ,
   getAllReminders ,
   updateReminder ,

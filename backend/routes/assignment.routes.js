@@ -12,7 +12,10 @@ const {
     getAssignmentDetails,
     getInstructorAssigments,
     getStudentAssigmentsSubmissions,
-    getCourseLatestAssignments
+    getCourseLatestAssignments,
+    getAssignmentSubmission,
+    updateSubmission,
+    checkAssignmentDueDate
 } = require("../controllers/assignment.controller")
 
 
@@ -25,21 +28,33 @@ router.get("/instructor" , protectRoutes , getInstructorAssigments)
 
 router.post("/:courseId" , protectRoutes , createAssignment)
 
+router.get("/check-due-date/:assignmentId" , protectRoutes , checkAssignmentDueDate)
+
 router.get("/:courseId/student/:userId" , protectRoutes , getStudentAssigmentsSubmissions)
 
-router.post("/:courseId/:assignmentId/submit" , protectRoutes , submitAssignmentSubmission)     
+router.post("/:courseId/:assignmentId/submit" , protectRoutes , submitAssignmentSubmission)
+
+router.put('/update-submission/:assignmentId/:submissionId' , protectRoutes , updateSubmission) // for the student
+
+router.get("/submission/:assignmentId" , protectRoutes , getAssignmentSubmission) // for the student
+
+router.get("/:assignmentId/submission/:userId" , protectRoutes , viewStudentSubmission) // for the instructor
+
+router.get("/:assignmentId" , protectRoutes , getAssignmentDetails)
+
+router.patch("/:assignmentId/submissions/:userId/marks" , protectRoutes , addMarksToSubmission)
+
+
+
 
 router.put("/:courseId/:assignmentId/update" , protectRoutes , updateAssignmentSubmission)
 
-router.get("/:assignmentId/submission/:userId" , protectRoutes , viewStudentSubmission)
 
-router.patch("/:assignmentId/submissions/:userId/marks" , protectRoutes , addMarksToSubmission)
 
 router.delete("/:assignmentId/delete" , protectRoutes , deleteSubmissionFile)
 
 router.get("/:assignmentId/submissions" , protectRoutes , getAllStudentsSubmissions)
 
-router.get("/:assignmentId" , protectRoutes , getAssignmentDetails)
 
 
 
