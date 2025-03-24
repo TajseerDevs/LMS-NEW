@@ -18,7 +18,7 @@ import { IoIosArrowDown , IoIosArrowForward  } from "react-icons/io";
 import { MdEdit , MdDeleteForever  } from "react-icons/md";
 import DeleteNoteModal from '../../components/DeleteNoteModal'
 import {axiosObj} from "../../utils/axios"
-import {useGetCourseCompletionPercentageQuery , useCheckFeedbackStatusQuery} from "../../store/apis/studentApis"
+import {useGetCourseCompletionPercentageQuery , useCheckFeedbackStatusQuery, useSetCourseLastProgressMutation, useGetCourseLastProgressQuery} from "../../store/apis/studentApis"
 import { useIncrementAttachmentViewMutation , useIncrementSectionViewMutation } from '../../store/apis/courseApis'
 import { useGetCourseLastestQuizzesQuery } from '../../store/apis/quizApis'
 import { formatTimeWithLabels } from '../../utils/formatTime'
@@ -73,6 +73,7 @@ const EnrolledCourse = () => {
     const [newQuestion, setNewQuestion] = useState("")
     const [answerState, setAnswerState] = useState({})
     const [selectedSection , setSelectedSection] = useState('')
+    const [selectedItem , setSelectedItem] = useState('')
 
     const [selectedTab , setSelectedTab] = useState('')
 
@@ -125,12 +126,16 @@ const EnrolledCourse = () => {
     const [setScormLogs] = useSetScormLogsMutation()
     const [incrementSectionView] = useIncrementSectionViewMutation()
     const [incrementAttachmentView] = useIncrementAttachmentViewMutation()
+    const [setCourseLastProgress] = useSetCourseLastProgressMutation()
 
-    const {data : courseLastQuizzes} = useGetCourseLastestQuizzesQuery({token , page : quizTabPage , courseId} , {skip : selectedTab !== "Quiz"})
+
+    const {data : courseLastQuizzes , isLoading : isLoadingLastQuizzes} = useGetCourseLastestQuizzesQuery({token , page : quizTabPage , courseId} , {skip : selectedTab !== "Quiz"})
     const {data : courseLastAssignments} = useGetCourseLatestAssignmentsQuery({token , page : assignmentTabPage , courseId} , {skip : selectedTab !== "Assignment"})
+    const {data : courseLastProgress} = useGetCourseLastProgressQuery({token , courseId})
 
 
-    console.log(courseLastAssignments)
+    console.log(courseLastProgress)
+
 
 
     // to not open the course rate pop up if the user already provide a feedback 
@@ -209,16 +214,19 @@ const EnrolledCourse = () => {
 
 
     const handleAttachmentClick = async (attachmentId , item) => {
-        
+
+
         setIframeOpenedAt(Date.now())
         refetch()
-
+        
         if (item?.type === "Video") {
             setIsVideoItem(true)
             alert("This video will be marked as completed when complete 90% of its duration automatically.")
         }
-
+        
         try {
+
+            await setCourseLastProgress({token , courseId , sectionId : selectedSection?._id , itemId : selectedItem?._id})
 
             const downloadResponse = await axiosObj.get(`/courses/download/${attachmentId}`, {
                 headers: { Authorization: `Bearer ${token}` },
@@ -240,6 +248,38 @@ const EnrolledCourse = () => {
     
     }
 
+
+
+    useEffect(() => {
+        if (courseLastProgress?.courseLastProgress?.progress?.sectionId && courseLastProgress?.courseLastProgress?.progress?.itemId) {
+            console.log("ok")
+            // openAttachmentById(courseLastProgress.sectionId, courseLastProgress.itemId)
+        }
+    }, [courseLastProgress])
+      
+
+
+
+    // ! TODO , to be completed
+    const openAttachmentById = (sectionId , itemId) => {
+
+        const sectionIndex = course?.sections?.findIndex(section => section._id === sectionId)
+        
+        if (sectionIndex === -1) return
+    
+        const sectionAttachments = getAttachmentsInSection(sectionIndex)
+    
+        const attachmentIndex = sectionAttachments.findIndex(attachment => attachment._id === itemId)
+    
+        if (attachmentIndex === -1) return
+    
+        setCurrentSectionIndex(sectionIndex)
+        setCurrentAttachmentIndex(attachmentIndex)
+    
+        handleAttachmentClick(itemId, attachmentIndex, sectionIndex)
+    
+    }
+    
 
 
 
@@ -900,46 +940,52 @@ const EnrolledCourse = () => {
 
                 <h3 className='text-[#002147] mb-6 font-semibold text-[30px]'>Course Quizzes</h3>
 
-                {courseLastQuizzes?.quizzes?.map((quiz) => (
-
-                    <div key={quiz?._id} className="flex w-[1000px] items-center bg-white last:mb-6 p-4 rounded-lg shadow-md">
-
-                        <div className="w-16 h-16 flex items-center justify-center bg-purple-100 rounded-lg">
-                            <img src={quizSvg} alt="Quiz Icon" className="w-10 h-10" />
-                        </div>
-
-                        <div className="flex-1 ml-4">
-                            <h3 className="text-lg capitalize text-[#35353A] font-bold">{quiz?.title}</h3>
-                            <p className="text-gray-500 text-sm">{formatDate(quiz?.dueDate)}</p>
-                        </div>
-
-                        <div className="flex items-center mr-36 gap-8 text-gray-600">
-
-                            <div className="text-center">
-                                <p className="text-sm text-[#AFAFAF]">Questions</p>
-                                <p className="font-semibold text-[#002147]">{quiz?.questions?.length}</p>
+                {isLoadingLastQuizzes ? (
+                    <p className="text-center text-gray-500">Loading quizzes...</p>
+                    ) : courseLastQuizzes?.quizzes?.length > 0 ? (
+                    courseLastQuizzes.quizzes.map((quiz) => (
+                        <div key={quiz?._id} className="flex w-[1000px] items-center bg-white last:mb-6 p-4 rounded-lg shadow-md">
+                            <div className="w-16 h-16 flex items-center justify-center bg-purple-100 rounded-lg">
+                                <img src={quizSvg} alt="Quiz Icon" className="w-10 h-10" />
                             </div>
 
-                            <div className="text-center">
-                                <p className="text-sm text-[#AFAFAF]">Time To Complete</p>
-                                <p className="font-semibold text-[#002147]">{quiz?.duration && quiz?.duration?.value && quiz?.duration?.unit && formatQuizDuration(quiz?.duration)}</p>
+                            <div className="flex-1 ml-4">
+                                <h3 className="text-lg capitalize text-[#35353A] font-bold">{quiz?.title}</h3>
+                                <p className="text-gray-500 text-sm">{formatDate(quiz?.dueDate)}</p>
                             </div>
 
-                            <div className="text-center">
-                                <p className="text-sm text-[#AFAFAF]">Grade</p>
-                                <p className="font-semibold text-[#002147]">{quiz?.maxScore}</p>
+                            <div className="flex items-center mr-36 gap-8 text-gray-600">
+                                    <div className="text-center">
+                                        <p className="text-sm text-[#AFAFAF]">Questions</p>
+                                        <p className="font-semibold text-[#002147]">{quiz?.questions?.length}</p>
+                                    </div>
+
+                                    <div className="text-center">
+                                        <p className="text-sm text-[#AFAFAF]">Time To Complete</p>
+                                        <p className="font-semibold text-[#002147]">{quiz?.duration && quiz?.duration?.value && quiz?.duration?.unit && formatQuizDuration(quiz?.duration)}</p>
+                                    </div>
+
+                                    <div className="text-center">
+                                        <p className="text-sm text-[#AFAFAF]">Grade</p>
+                                        <p className="font-semibold text-[#002147]">{quiz?.maxScore}</p>
+                                    </div>
+                                </div>
+
+                                {quiz?.hasSubmission ? (
+                                    <YellowBtn onClick={() => navigate(`/quiz-result/${quiz?._id}`)} text="View Result" icon={FaArrowRight} />
+                                ) : (
+                                    <YellowBtn onClick={() => navigate(`/quiz-details/${quiz?._id}`)} text="Start" icon={FaArrowRight} />
+                                )}
+
                             </div>
+                        ))
 
-                        </div>
+                    ) : (
+                        <p className="text-center text-gray-500">No quizzes available.</p>
+                    )}
 
-                        {quiz?.hasSubmission ? <YellowBtn onClick={() => navigate(`/quiz-result/${quiz?._id}`)} text="View Result" icon={FaArrowRight}/> : <YellowBtn onClick={() => navigate(`/quiz-details/${quiz?._id}`)} text="Start" icon={FaArrowRight}/>}
 
-
-                    </div>
-
-                ))}
-
-                <div className='flex items-center justify-between p-3 w-[70%]'>
+                {courseLastQuizzes?.quizzes?.length !== 0 && !isLoadingLastQuizzes && <div className='flex items-center justify-end gap-6 p-3 w-[80%]'>
 
                     <button  
                         onClick={() => setQuizTabPage((prev) => Math.max(prev - 1, 1))}
@@ -961,7 +1007,7 @@ const EnrolledCourse = () => {
                         next
                     </button>
 
-                </div>
+                </div>}
 
             </div>
 
@@ -1164,7 +1210,7 @@ const EnrolledCourse = () => {
 
             <div key={section?._id} className='bg-white border-b w-full border-gray-300 p-4'>
 
-                <div onClick={() => toggleSection(section?._id)} className='flex justify-between cursor-pointer items-center'>
+                <div onClick={() => {toggleSection(section?._id) ; handleSectionSelect(section)}} className='flex justify-between cursor-pointer items-center'>
 
                     <div className='flex cursor-pointer flex-col gap-2'>
                     
@@ -1203,8 +1249,11 @@ const EnrolledCourse = () => {
                             <div key={item?._id} className='flex cursor-pointer justify-between items-center w-full mt-4'
                                 onClick={async () => {
                                     try {
+                                        console.log("Clicked item:", item);
+                                        console.log("Item ID:", item?._id);
+                                        setSelectedItem(item)
                                         selectAttachment(sectionIndex , itemIndex)
-                                        handleAttachmentClick(item?.attachments[0]?._id , item)
+                                        await handleAttachmentClick(item?.attachments[0]?._id , item)
                                         await incrementAttachmentView({token , courseId , sectionId : section?._id , attachmentId : item?.attachments[0]?._id})
                                     } catch (error) {
                                         console.log(error)

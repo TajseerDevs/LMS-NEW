@@ -19,6 +19,8 @@ const Enrollment = require("../models/Enrollment");
 const QuizResult = require("../models/QuizResult");
 const Submission = require("../models/Submission");
 const { getQuizComment , getAssignmentComment } = require("../utils/getGradesFeedback");
+const ExcelJS = require("exceljs");
+
 // const { PDFDocument } = require('pdf-lib');
 
 
@@ -55,6 +57,35 @@ const getAllStudentCourses = async (req, res, next) => {
       totalPages: Math.ceil(totalCourses / limit),
       totalCourses,
     })
+
+  } catch (error) {
+    next(error)
+  }
+
+}
+
+
+
+
+const getAllStudentCoursesNoPaging = async (req, res, next) => {
+
+  try {
+
+    const student = await Student.findOne({ userObjRef: req.user._id }).populate({
+      path: "coursesEnrolled",
+      select: "-paymentCourses -studentsEnrolled -sections -quizzes -assignments",
+      populate: {
+        path: "instructorId",
+        select: "name email",
+        populate: { path: "userObjRef", select: "name email profilePic" },
+      },
+    });
+
+    if (!student) {
+      return next(createError("Student not found", 404));
+    }
+
+    res.status(200).json({studentCourses: student.coursesEnrolled})
 
   } catch (error) {
     next(error)
@@ -499,98 +530,115 @@ const getCourseCompletionPercentage = async (req, res, next) => {
 
 
 
-// const getAllCoursesCompletionPercentage = async (req, res, next) => {
+const getAllCoursesCompletionPercentagePaging = async (req, res, next) => {
 
-//   try {
+  try {
 
-//     const studentUserDoc = await Student.findOne({ userObjRef : req.user._id })
+    const page = Number(req.query.page) || 1
+    const limit = 5
 
-//     if (!studentUserDoc) {
-//       return next(createError("Student not found", 404))
-//     }
+    const studentUserDoc = await Student.findOne({ userObjRef: req.user._id })
 
-//     const enrolledCourses = await Course.find({
-//       studentsEnrolled: studentUserDoc._id,
-//     }).populate("sections.items.attachments")
+    if (!studentUserDoc) {
+      return next(createError("Student not found", 404))
+    }
+
+    const totalCourses = await Course.countDocuments({ studentsEnrolled: studentUserDoc._id })
+    const totalPages = Math.ceil(totalCourses / limit)
+
+    const enrolledCourses = await Course.find({
+      studentsEnrolled: studentUserDoc._id,
+    })
+    .populate({
+      path: 'sections.items.attachments'
+    })
+    .populate({
+      path: 'instructorId', 
+      populate: {
+        path: 'userObjRef', 
+        select: 'firstName lastName email profilePic'
+      }
+    })
+    .skip((page - 1) * limit)
+    .limit(limit)
 
 
-//     if (!enrolledCourses.length) {
+    if (!enrolledCourses.length) {
+      return res.status(200).json({
+        message: "No enrolled courses found",
+        courses: [],
+        totalCourses,
+        completedCourses: 0,
+        totalPages,
+        currentPage: pageNumber,
+      })
 
-//       return res.status(200).json({ 
-//         message: "No enrolled courses found", 
-//         courses: [], 
-//         totalCourses: 0,
-//         completedCourses: 0 
-//       })
+    }
 
-//     }
+    const userLogs = await Lesson.find({
+      userId: req.user._id,
+      lesson_status: { $in: ["completed", "passed"] },
+    }).select("attachement courseId");
 
-//     const userLogs = await Lesson.find({
-//       userId: req.user._id,
-//       lesson_status: { $in: ["completed", "passed"] },
-//     }).select("attachement courseId")
+    const completedAttachmentMap = userLogs.reduce((acc, log) => {
+      if (!acc[log.courseId]) acc[log.courseId] = new Set()
+      acc[log.courseId].add(log.attachement.toString())
+      return acc
+    }, {})
 
-//     const completedAttachmentMap = userLogs.reduce((acc, log) => {
+    let completedCourses = 0
 
-//       if (!acc[log.courseId]) acc[log.courseId] = new Set()
+    const courseProgress = enrolledCourses.map((course) => {
 
-//       acc[log.courseId].add(log.attachement.toString())
+      let totalAttachments = 0
+      let completedAttachments = 0
 
-//       return acc
+      course.sections.forEach((section) => {
 
-//     }, {})
+        section.items.forEach((item) => {
 
-//     let completedCourses = 0
+          totalAttachments += item.attachments.length
+          const completedAttachmentIds = completedAttachmentMap[course._id.toString()] || new Set()
 
-//     const courseProgress = enrolledCourses.map((course) => {
+          completedAttachments += item.attachments.filter((attachment) =>
+            completedAttachmentIds.has(attachment._id.toString())
+          ).length
 
-//       let totalAttachments = 0
-//       let completedAttachments = 0
+        })
 
-//       course.sections.forEach((section) => {
+      })
 
-//         section.items.forEach((item) => {
+      const progressPercentage = totalAttachments > 0 ? (completedAttachments / totalAttachments) * 100 : 0
 
-//           totalAttachments += item.attachments.length
+      if (progressPercentage === 100) {
+        completedCourses += 1
+      }
 
-//           const completedAttachmentIds = completedAttachmentMap[course._id.toString()] || new Set()
+      return {
+        courseId: course._id,
+        courseName: course.title,
+        totalAttachments,
+        completedAttachments,
+        progress: progressPercentage.toFixed(0) + "%",
+        course
+      }
 
-//           completedAttachments += item.attachments.filter((attachment) => completedAttachmentIds.has(attachment._id.toString())).length
+    })
 
-//         })
+    res.status(200).json({
+      userId: req.user._id,
+      totalCourses,
+      completedCourses,
+      totalPages,
+      currentPage: page,
+      courses: courseProgress,
+    })
 
-//       })
+  } catch (error) {
+    next(error)
+  }
 
-//       const progressPercentage = totalAttachments > 0 ? (completedAttachments / totalAttachments) * 100 : 0
-
-//       if (progressPercentage === 100) {
-//         completedCourses += 1
-//       }
-
-//       return {
-//         courseId: course._id,
-//         courseName: course.title,
-//         totalAttachments,
-//         completedAttachments,
-//         progress: progressPercentage.toFixed(2) + "%",
-//       }
-    
-//     })
-
-//     const totalCourses = enrolledCourses.length
-
-//     res.status(200).json({ 
-//       userId: req.user._id, 
-//       totalCourses, 
-//       completedCourses,
-//       courses: courseProgress 
-//     })
-
-//   } catch (error) {
-//     next(error)
-//   }
-
-// }
+}
 
 
 
@@ -598,6 +646,8 @@ const getCourseCompletionPercentage = async (req, res, next) => {
 const getAllCoursesCompletionPercentage = async (req, res, next) => {
 
   try {
+
+    const { status = "all" } = req.query
 
     const studentUserDoc = await Student.findOne({ userObjRef: req.user._id })
 
@@ -607,7 +657,17 @@ const getAllCoursesCompletionPercentage = async (req, res, next) => {
 
     const enrolledCourses = await Course.find({
       studentsEnrolled: studentUserDoc._id,
-    }).populate("sections.items.attachments")
+    })
+    .populate({
+      path: 'sections.items.attachments'
+    })
+    .populate({
+      path: 'instructorId', 
+      populate: {
+        path: 'userObjRef', 
+        select: 'firstName lastName email profilePic'
+      }
+    })
 
     if (!enrolledCourses.length) {
       return res.status(200).json({
@@ -669,6 +729,24 @@ const getAllCoursesCompletionPercentage = async (req, res, next) => {
 
     })
 
+
+    const filteredCourses = courseProgress.filter((course) => {
+      switch (status) {
+        case "ongoing":
+          return parseFloat(course.progress) > 0 && parseFloat(course.progress) < 100;
+        case "upcoming":
+          return parseFloat(course.progress) === 0;
+        case "completed":
+          return parseFloat(course.progress) === 100;
+        case "all":
+        default:
+          return true;
+      }
+    })
+
+
+    const randomCourses = filteredCourses.sort(() => Math.random() - 0.5)
+
     const totalCourses = enrolledCourses.length
 
     let badgeAssigned = false
@@ -705,7 +783,7 @@ const getAllCoursesCompletionPercentage = async (req, res, next) => {
       userId: req.user._id,
       totalCourses,
       completedCourses,
-      courses: courseProgress,
+      courses: randomCourses ,
       badgeAssigned,
     })
 
@@ -1320,7 +1398,7 @@ const getStudentGrades = async (req , res , next) => {
     const quizResults = await QuizResult.find({ studentId : studentDocObj._id })
     .populate("courseId", "title")
     .populate("quizId", "title")
-    .sort({ createdAt: -1 })
+    .sort({ createdAt: 1 })
 
     const submissions = await Submission.find({ studentId : studentDocObj._id , isGraded : true })
     .populate({
@@ -1330,7 +1408,7 @@ const getStudentGrades = async (req , res , next) => {
         path: "courseId", 
         select: "title",
       },
-    }).sort({ submittedAt: -1 })
+    }).sort({ submittedAt: 1 })
 
 
     const shuffleArray = (array) => {
@@ -1345,22 +1423,33 @@ const getStudentGrades = async (req , res , next) => {
     const formattedResults = [
       ...quizResults.map((quiz) => ({
         course: quiz.courseId.title,
-        type: `Quiz: ${quiz.quizId.title}`,
+        type: `Quiz : ${quiz.quizId.title}`,
         grade: `${quiz.totalScore}/${quiz.maxPossibleScore}`,
         status: getQuizComment(quiz.totalScore , quiz.maxPossibleScore , quiz.passStatus),
-        comment : quiz.passStatus ? "Great Work" : "Keep Going"
+        comment : quiz.passStatus ? "Great Work" : "Keep Going" ,
+        percentage: (quiz.totalScore / quiz.maxPossibleScore) * 100,
+        assessmentType : "Quiz" ,
+        courseId : quiz.courseId._id
       })),
       ...submissions.map((submission) => ({
         course: submission.assignmentId.courseId.title,
-        type: `Assignment: ${submission.assignmentId.title}`,
+        type: `Assignment : ${submission.assignmentId.title}`,
         grade: submission.isGraded ? `${submission.marks}/${submission.assignmentId.mark}` : "Not Graded",
         status: submission.isGraded ? getAssignmentComment(submission.marks , submission.assignmentId.mark) : "Not Graded",
         comment: submission.feedback || "No feedback yet",
+        percentage: submission.isGraded ? (submission.marks / submission.assignmentId.mark) * 100 : 0 ,
+        assessmentType : "Assignment" ,
+        courseId : submission.assignmentId.courseId._id
       }))
     ]
 
 
     const randomizedResults = shuffleArray(formattedResults)
+
+    const totalScore = formattedResults.reduce((sum , item) => sum + (item.percentage || 0), 0)
+    const totalItems = formattedResults.length
+
+    const gpa = totalItems > 0 ? totalScore / totalItems : 0
 
     const totalRecords = randomizedResults.length
     const totalPages = Math.ceil(totalRecords / limit)
@@ -1372,6 +1461,106 @@ const getStudentGrades = async (req , res , next) => {
       totalPages,
       totalRecords,
       results: paginatedResults,
+      gpa: `${gpa.toFixed(0)}%`,
+    })
+
+  } catch (error) {
+    next(error)
+  }
+
+}
+
+
+
+
+const generateStudentGradesExcel = async (req , res , next) => {
+
+  try {
+    
+    const studentDocObj = await Student.findOne({ userObjRef: req.user._id })
+
+    if (!studentDocObj) {
+      return next(createError("Student not exist", 404))
+    }
+
+    const quizResults = await QuizResult.find({ studentId: studentDocObj._id })
+      .populate("courseId", "title")
+      .populate("quizId", "title")
+      .sort({ createdAt: -1 });
+
+    const submissions = await Submission.find({ studentId: studentDocObj._id, isGraded: true })
+      .populate({
+        path: "assignmentId",
+        select: "title mark courseId",
+        populate: {
+          path: "courseId",
+          select: "title",
+        },
+      })
+      .sort({ submittedAt: -1 })
+
+
+    const formattedResults = [
+      ...quizResults.map((quiz) => ({
+        Course: quiz.courseId.title,
+        Type: `Quiz : ${quiz.quizId.title}`,
+        Grade: `${quiz.totalScore}/${quiz.maxPossibleScore}`,
+        Status: getQuizComment(quiz.totalScore, quiz.maxPossibleScore, quiz.passStatus),
+        Comment: quiz.passStatus ? "Great Work" : "Keep Going",
+        Percentage: (quiz.totalScore / quiz.maxPossibleScore) * 100,
+        AssessmentType: "Quiz",
+      })),
+      ...submissions.map((submission) => ({
+        Course: submission.assignmentId.courseId.title,
+        Type: `Assignment : ${submission.assignmentId.title}`,
+        Grade: submission.isGraded ? `${submission.marks}/${submission.assignmentId.mark}` : "Not Graded",
+        Status: submission.isGraded ? getAssignmentComment(submission.marks, submission.assignmentId.mark) : "Not Graded",
+        Comment: submission.feedback || "No feedback yet",
+        Percentage: submission.isGraded ? (submission.marks / submission.assignmentId.mark) * 100 : 0,
+        AssessmentType: "Assignment",
+      })),
+    ]
+
+    const workbook = new ExcelJS.Workbook()
+    const worksheet = workbook.addWorksheet("Student Grades")
+
+    worksheet.columns = [
+      { header: "Course", key: "Course", width: 30 },
+      { header: "Type", key: "Type", width: 30 },
+      { header: "Grade", key: "Grade", width: 20 },
+      { header: "Status", key: "Status", width: 20 },
+      { header: "Comment", key: "Comment", width: 30 },
+      { header: "Percentage", key: "Percentage", width: 20 },
+      { header: "Assessment Type", key: "AssessmentType", width: 20 },
+    ];
+
+    formattedResults.forEach((result) => {
+      worksheet.addRow(result)
+    })
+
+    worksheet.getColumn("Percentage").alignment = { horizontal: "left" }
+
+    worksheet.protect("securepassword", {
+      selectLockedCells: true,
+      selectUnlockedCells: false,
+      formatCells: false,
+      formatColumns: false,
+      formatRows: false,
+      insertColumns: false,
+      insertRows: false,
+      deleteColumns: false,
+      deleteRows: false,
+      sort: false,
+      autoFilter: false,
+      pivotTables: false,
+    })
+
+    const filePath = path.join(__dirname, "../uploads/temp", `Student_Grades_${Date.now()}.xlsx`)
+    await workbook.xlsx.writeFile(filePath)
+
+    res.download(filePath, `Student_Grades.xlsx`, (err) => {
+      if (err) console.error("Error sending file:", err)
+      fs.unlinkSync(filePath)
     })
 
   } catch (error) {
@@ -2149,9 +2338,9 @@ const setCourseLastProgress = async (req , res , next) => {
 
   try {
     
-    const { studentId , courseId , sectionId , itemId } = req.body
+    const { courseId , sectionId , itemId } = req.body
   
-    if (!studentId || !courseId || !sectionId || !itemId) {
+    if (!courseId || !sectionId || !itemId) {
       return next(createError("Missing required fields" , 404))
     }
 
@@ -2211,7 +2400,7 @@ const getCourseLastProgress = async (req , res , next) => {
       return next(createError("Student not found" , 404))
     }
     
-    const course = await Course.findById(courseId)
+    const course = await Course.findById(courseId).populate("sections.items.attachments")
 
     if (!course) {
       return next(createError("Course Not exist", 404))
@@ -2228,8 +2417,8 @@ const getCourseLastProgress = async (req , res , next) => {
     }
 
     res.status(200).json({
-      message: "Course last progress retrieved successfully" ,
       courseLastProgress: courseProgress ,
+      courseSections : course.sections
     })
 
   } catch (error) {
@@ -2568,6 +2757,7 @@ const checkFeedbackStatus = async (req , res , next) => {
 
 module.exports = {
   getAllStudentCourses,
+  getAllStudentCoursesNoPaging ,
   getStudentEnrolledCourses ,
   enrollFreeCourse ,
   courseEnrolRequest,
@@ -2576,6 +2766,7 @@ module.exports = {
   addCourseRating,
   getCourseCompletionPercentage,
   getAllCoursesCompletionPercentage ,
+  getAllCoursesCompletionPercentagePaging ,
   getAllStudentsCourseCompletionPercentage ,
   addToWishlist,
   removeFromWishlist,
@@ -2588,6 +2779,7 @@ module.exports = {
   addToBookMark,
   generateCertificate ,
   getStudentGrades ,
+  generateStudentGradesExcel ,
   addReminder ,
   getAllReminders ,
   updateReminder ,

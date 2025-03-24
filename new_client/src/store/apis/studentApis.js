@@ -28,8 +28,15 @@ const studentApi = createApi({
       }),
     }),
     getAllCoursesCompletionPercentage : builder.query({
-      query: ({token}) => ({
-        url: `/courses-completion-percentage`,
+      query: ({token , status}) => ({
+        url: `/courses-completion-percentage?status=${status}`,
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    }),
+    getAllCoursesCompletionPercentagePaging : builder.query({
+      query: ({token , page}) => ({
+        url: `/courses-completion?page=${page}`,
         method: "GET",
         headers: { Authorization: `Bearer ${token}` },
       }),
@@ -62,10 +69,39 @@ const studentApi = createApi({
         headers: { Authorization: `Bearer ${token}` },
       }),
     }),
+    generateStudentGradesExcel: builder.mutation({
+      query: ({token}) => ({
+        url: `/grades-excel-sheet-report`,
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    }),
+    getAllStudentCoursesNoPaging: builder.query({
+      query: ({token}) => ({
+        url: `/all-courses`,
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    }),
     enrollFreeCourse: builder.mutation({
       query: ({token , courseId}) => ({
         url: `/enroll-free/${courseId}`,
         method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    }),
+    setCourseLastProgress: builder.mutation({
+      query: ({token , courseId , sectionId , itemId}) => ({
+        url: `/set-last-progress`,
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body : {courseId , sectionId , itemId}
+      }),
+    }),
+    getCourseLastProgress: builder.query({
+      query: ({token , courseId}) => ({
+        url: `/course-last-progress/${courseId}`,
+        method: "GET",
         headers: { Authorization: `Bearer ${token}` },
       }),
     }),
@@ -79,11 +115,16 @@ const {
   useCalculateStudentAttendanceQuery ,
   useGetAvgLessonsProgressQuery ,
   useGetAllCoursesCompletionPercentageQuery ,
+  useGetAllCoursesCompletionPercentagePagingQuery ,
   useGetStudentProgressQuery ,
   useGetCourseCompletionPercentageQuery ,
   useCheckFeedbackStatusQuery ,
   useEnrollFreeCourseMutation ,
-  useGetStudentGradesQuery
+  useGetStudentGradesQuery ,
+  useGenerateStudentGradesExcelMutation ,
+  useGetAllStudentCoursesNoPagingQuery ,
+  useSetCourseLastProgressMutation,
+  useGetCourseLastProgressQuery
 } = studentApi
 
  
@@ -94,10 +135,15 @@ export {
   useCalculateStudentAttendanceQuery ,
   useGetAvgLessonsProgressQuery , 
   useGetAllCoursesCompletionPercentageQuery ,
+  useGetAllCoursesCompletionPercentagePagingQuery ,
   useGetStudentProgressQuery ,
   useGetCourseCompletionPercentageQuery ,
   useCheckFeedbackStatusQuery ,
   useEnrollFreeCourseMutation ,
   useGetStudentGradesQuery ,
+  useGenerateStudentGradesExcelMutation ,
+  useGetAllStudentCoursesNoPagingQuery ,
+  useSetCourseLastProgressMutation ,
+  useGetCourseLastProgressQuery ,
   studentApi ,
 }

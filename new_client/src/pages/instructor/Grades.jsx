@@ -65,7 +65,7 @@ const Grades = () => {
                 <option value="" selected disabled>Course Name</option>
 
                 {instructorCourses?.map((course) => (
-                    <option key={course?._id} value={course?._id}>{course?.title}</option>
+                  <option key={course?._id} value={course?._id}>{course?.title}</option>
                 ))}
 
             </select>

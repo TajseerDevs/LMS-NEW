@@ -1,95 +1,28 @@
 import React, { useState } from 'react'
 import studentImg from "../../assets/laith-img.png"
-import YellowBtn from '../../components/YellowBtn';
-import { MdFileDownload } from "react-icons/md";
-import { FaEye } from "react-icons/fa";
-import { useGetStudentGradesQuery } from '../../store/apis/studentApis';
-import { useSelector } from 'react-redux';
-
+import YellowBtn from '../../components/YellowBtn'
+import { MdFileDownload } from "react-icons/md"
+import { FaEye } from "react-icons/fa"
+import { useGenerateStudentGradesExcelMutation, useGetAllStudentCoursesNoPagingQuery, useGetStudentGradesQuery } from '../../store/apis/studentApis'
+import { useSelector } from 'react-redux'
+import { FaFilter } from "react-icons/fa"
+import { axiosObj } from '../../utils/axios'
 
 
 const StudentGrades = () => {
 
-  const {token} = useSelector((state) => state.user)
+  const {token , user} = useSelector((state) => state.user)
   
   const [currentPage , setCurrentPage] = useState(1)
-  const totalPages = 10
+
+  const [searchTerm, setSearchTerm] = useState("")
+  const [selectedCourse, setSelectedCourse] = useState("")
+  const [assessmentType , setAssessmentType] = useState("")
+  const [sortOrder, setSortOrder] = useState("")
 
   const {data : studnetGrades , isLoading} = useGetStudentGradesQuery({token , page : currentPage})
-
-
-  const grades = [
-    {
-      course: "Biology Course",
-      type: "Quiz: Quiz Title",
-      grade: "5/5",
-      status: "Very Good",
-      comment: "Keep Going!",
-    },
-    {
-      course: "Math Course",
-      type: "Assignment: Assignment Title",
-      grade: "2.5/8",
-      status: "Bad",
-      comment: "Very bad !",
-    },
-    {
-      course: "Math Course",
-      type: "Assignment: Assignment Title",
-      grade: "2.5/8",
-      status: "Bad",
-      comment: "Very bad !",
-    },
-    {
-      course: "Python",
-      type: "Project: Project Title",
-      grade: "4/8",
-      status: "Good",
-      comment: "Good !",
-    },
-    {
-      course: "Python",
-      type: "Project: Project Title",
-      grade: "4/8",
-      status: "Good",
-      comment: "Good !",
-    },
-    {
-      course: "Python",
-      type: "Project: Project Title",
-      grade: "4/8",
-      status: "Good",
-      comment: "Good !",
-    },
-    {
-      course: "Python",
-      type: "Project: Project Title",
-      grade: "4/8",
-      status: "Good",
-      comment: "Good !",
-    },
-    {
-      course: "Python",
-      type: "Project: Project Title",
-      grade: "4/8",
-      status: "Good",
-      comment: "Good !",
-    },
-    {
-      course: "Python",
-      type: "Project: Project Title",
-      grade: "4/8",
-      status: "Good",
-      comment: "Good !",
-    },
-    {
-      course: "Python",
-      type: "Project: Project Title",
-      grade: "4/8",
-      status: "Good",
-      comment: "Good !",
-    },
-  ]
+  const {data : studnetCourses} = useGetAllStudentCoursesNoPagingQuery({token})
+  const [generateStudentGradesExcel] = useGenerateStudentGradesExcelMutation()
 
 
   const statusColors = {
@@ -99,8 +32,15 @@ const StudentGrades = () => {
   }
 
 
+  const statusPriority = {
+    "Very Good": 1,
+    "Good": 2,
+    "Bad": 3,
+  }
+
+
   const handleNextPage = () => {
-    if (currentPage < totalPages) {
+    if (currentPage < studnetGrades?.totalPages) {
       setCurrentPage(currentPage + 1)
     }
   }
@@ -112,7 +52,72 @@ const StudentGrades = () => {
     }
   }
 
+
+
+  const resetFilters = () => {
+    setSelectedCourse("")
+    setAssessmentType("")
+    setSearchTerm("")
+    setSortOrder("")
+    setCurrentPage(1)
+  }
+
+
+  const filteredGrades = (studnetGrades?.results || [])?.filter(
+    (grade) =>
+      (selectedCourse === "" || grade?.courseId === selectedCourse) &&
+      (assessmentType === "" || grade?.assessmentType === assessmentType) &&
+      (searchTerm === "" || grade?.course?.toLowerCase().includes(searchTerm.toLowerCase()))
+  )
+
+
+
+  const sortedGrades = [...(filteredGrades || [])]?.sort((a, b) => {
+
+    if (!sortOrder) return 0
   
+    const priorityA = statusPriority[a?.status] || 4
+    const priorityB = statusPriority[b?.status] || 4
+  
+    return sortOrder === "asc" ? priorityA - priorityB : priorityB - priorityA
+
+  })
+
+
+
+  const handleDownloadReport = async () => {
+
+    try {
+
+      const response = await axiosObj.get("/student/grades-excel-sheet-report", {
+        headers : {
+          "Authorization" : `Bearer ${token}`
+        },  
+        responseType: "blob",
+      })
+  
+      const url = window.URL.createObjectURL(new Blob([response.data]))
+      const link = document.createElement("a")
+      link.href = url
+      link.setAttribute("download", `${user?.firstName + " " + user?.lastName}_Grades.xlsx`)
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+
+    } catch (error) {
+      console.error("Error downloading the file:", error)
+    }
+
+  }
+
+
+
+
+  if(isLoading){
+    return <h1 className='p-10'>Loading</h1>
+  }
+  
+
 
 
   return (
@@ -133,37 +138,47 @@ const StudentGrades = () => {
 
           <div>
             <h2 className="text-2xl text-[#002147] font-semibold">Laith Abu Fadda</h2>
-            <p className="text-[#002147]">ID-12458586</p>
+            <p className="text-[#002147]">ID-{user?._id.slice(0 , 10)}</p>
           </div>
 
         </div>
 
         <div className="text-center md:text-left">
           <p className="text-2xl text-[#002147] font-medium">GPA</p>
-          <p className="text-2xl font-semibold text-[#FFC200]">90%</p>
+          <p className="text-2xl font-semibold text-[#FFC200]">{studnetGrades?.gpa}</p>
         </div>
-
 
       </div>
 
 
-      <div className="flex p-2 justify-between max-w-[90%] flex-col md:flex-row gap-8 mt-8">
+      <div className="flex p-2 justify-between max-w-[100%] flex-col md:flex-row gap-6 mt-8">
 
-        <input placeholder="🔍  Search" className="w-full p-3 rounded-lg md:w-[380px]" />
+        <input value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="🔍  Search" className="w-full p-3 rounded-lg md:w-[380px]" />
         
-        <select className="w-full p-3 rounded-lg md:w-[380px]">
-          <option>Course Name</option>
+        <select value={selectedCourse} onChange={(e) => setSelectedCourse(e.target.value)} className="w-full p-3 rounded-lg md:w-[380px]">
+          <option value="" selected disabled>Course Name</option>
+          {studnetCourses?.studentCourses?.map((course) => (
+            <option key={course?._id} value={course?._id}>
+              {course.title}
+            </option>
+          ))}
         </select>
           
-        <select className="w-full p-3 rounded-lg md:w-[380px]">
-          <option>Sort Grade</option>
+        <select value={sortOrder} onChange={(e) => setSortOrder(e.target.value)} className="w-full p-3 rounded-lg md:w-[380px]">
+          <option selected disabled value="">Sort Grade</option>
+          <option value="asc">Ascending</option>
+          <option value="desc">Descending</option>
         </select>
         
-        <select className="w-full p-3 rounded-lg md:w-[380px]">
-          <option>Assessment Type</option>
+        <select value={assessmentType} onChange={(e) => setAssessmentType(e.target.value)} className="w-full p-3 rounded-lg md:w-[380px]">
+          <option value="" selected disabled>Assessment Type</option>
+          <option value="Quiz">Quiz</option>
+          <option value="Assignment">Assignment</option>
         </select>
 
-        <YellowBtn icon={MdFileDownload} text="Download Grade Report"  />
+        <YellowBtn onClick={handleDownloadReport} icon={MdFileDownload} text="Download Grade Report"  />
+
+        <FaFilter size={30} className='text-[#403685] mt-2 cursor-pointer' onClick={resetFilters} />
  
       </div>
 
@@ -188,11 +203,13 @@ const StudentGrades = () => {
 
           <tbody>
 
-            {grades.map((grade, index) => (
+          {sortedGrades?.length > 0 ? (
+
+            sortedGrades?.map((grade, index) => (
 
               <tr key={index} className="border-t">
 
-                <td className="p-4 text-[#35353A] font-semibold">{grade.course}</td>
+                <td className="p-4 text-[#35353A] capitalize font-semibold">{grade.course}</td>
                 <td className="p-4 text-[#35353A] font-semibold">{grade.type}</td>
                 <td className="p-4 text-[#35353A] font-semibold">{grade.grade}</td>
 
@@ -210,7 +227,19 @@ const StudentGrades = () => {
 
               </tr>
 
-            ))}
+            ))
+
+          ) : (
+
+            <tr>
+
+              <td colSpan="6" className="p-4 text-center text-gray-500 font-semibold">
+                No results found.
+              </td>
+
+            </tr>
+          
+          )}
 
           </tbody>
 
@@ -223,10 +252,10 @@ const StudentGrades = () => {
         <YellowBtn text="Previous" onClick={handlePrevPage} disabled={currentPage === 1} />
 
         <span className="text-gray-700 text-lg font-semibold">
-          Page {currentPage} of {totalPages}
+          Page {currentPage} of {studnetGrades?.totalPages}
         </span>
         
-        <YellowBtn text="Next" onClick={handleNextPage} disabled={currentPage === totalPages} />
+        <YellowBtn text="Next" onClick={handleNextPage} disabled={currentPage === studnetGrades?.totalPages} />
 
       </div>
 

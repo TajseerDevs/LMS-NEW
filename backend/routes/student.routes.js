@@ -42,7 +42,10 @@ const {
     enrollFreeCourse,
     checkFeedbackStatus,
     getStudentEnrolledCourses,
-    getStudentGrades
+    getStudentGrades,
+    getAllStudentCoursesNoPaging,
+    generateStudentGradesExcel,
+    getAllCoursesCompletionPercentagePaging
 } = require("../controllers/student.controller")
 
 
@@ -54,6 +57,8 @@ const router = express.Router()
 
 
 router.get("/" , protectRoutes , getAllStudentCourses)
+
+router.get("/all-courses" , protectRoutes , getAllStudentCoursesNoPaging)
 
 router.get("/enrolled-courses" , protectRoutes , getStudentEnrolledCourses)
 
@@ -67,11 +72,17 @@ router.get("/check-enrollment/:courseId" , protectRoutes , checkEnrollmentStatus
 
 router.post("/rate/:courseId" , protectRoutes , addCourseRating) 
 
+
+
 router.get("/course-completion-percentage/:courseId" , protectRoutes , getCourseCompletionPercentage)
 
 router.get("/courses-completion-percentage" , protectRoutes , getAllCoursesCompletionPercentage)
 
+router.get("/courses-completion" , protectRoutes , getAllCoursesCompletionPercentagePaging)
+
 router.get("/course-students-completion-percentage/:courseId" , protectRoutes , getAllStudentsCourseCompletionPercentage)
+
+
 
 router.post("/add-whishlist/:courseId" , protectRoutes , addToWishlist)
 
@@ -104,6 +115,8 @@ router.get("/bookmarks" , protectRoutes , getBookMarks)
 router.post('/generate-certificate/:courseId' , protectRoutes , generateCertificate)
 
 router.get("/grades" , protectRoutes , getStudentGrades) // grades here will be quizzes , assignments
+
+router.get("/grades-excel-sheet-report" , protectRoutes , generateStudentGradesExcel)
 
 
 

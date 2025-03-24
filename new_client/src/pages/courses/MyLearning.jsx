@@ -11,112 +11,36 @@ import { useNavigate } from 'react-router-dom';
 import NewTicketModal from '../../components/NewTicketModal';
 import { useGetAllUserTicketsQuery } from '../../store/apis/TicketApis';
 import { useSelector } from 'react-redux';
+import { useGetAllCoursesCompletionPercentagePagingQuery, useGetAllCoursesCompletionPercentageQuery } from '../../store/apis/studentApis';
+import YellowBtn from '../../components/YellowBtn';
+import PurpleBtn from '../../components/PurpleBtn';
+import { FaAngleRight } from "react-icons/fa6";
 
-
+  
 
 
 const MyLearning = () => {
 
+  const baseUrl = `http://localhost:5500`
+
   const navigate = useNavigate()
-  const { token } = useSelector((state) => state.user);
+  const { token } = useSelector((state) => state.user)
 
   const [selectedFilter , setSelectedFilter] = useState("All Courses")
   const [openNewTicketModal , setOpenNewTicketModal] = useState(false)
+  const [page , setPage] = useState(1)
+
+  const filterMapping = {
+    "All Courses": "all",
+    "On Going": "ongoing",
+    "Up Coming": "upcoming",
+    "Completed": "completed",
+  }
+
+  const {data : coursesCompletion , isLoading} = useGetAllCoursesCompletionPercentageQuery({token , status : filterMapping[selectedFilter]})
+  const {data : coursesCompletionCards , isLoading : isLoadingCompletionCards} = useGetAllCoursesCompletionPercentagePagingQuery({token , page})
 
 
-  const courses = [
-        {
-          id: 1,
-          title: "Beginner’s Guide to Becoming a professional Front-End Developer",
-          chapter: "Chapter 4",
-          part: "part 2",
-          progress: 55,
-          mentor: {
-            name: "Eileen Schinner",
-            role: "Mentor",
-            avatar: testImg, 
-          },
-          image: "https://via.placeholder.com/150", 
-        },
-        {
-          id: 2,
-          title: "Beginner’s Guide to Becoming a professional Front-End Developer",
-          chapter: "Chapter 4",
-          part: "part 2",
-          progress: 55,
-          mentor: {
-            name: "Eileen Schinner",
-            role: "Mentor",
-            avatar: testImg , 
-          },
-          image: "https://via.placeholder.com/150",
-        },
-        {
-          id: 3,
-          title: "Beginner’s Guide to Becoming a professional Front-End Developer",
-          chapter: "Chapter 4",
-          part: "part 2",
-          progress: 55,
-          mentor: {
-            name: "Eileen Schinner",
-            role: "Mentor",
-            avatar: testImg, 
-          },
-          image: "https://via.placeholder.com/150", 
-        },
-        {
-          id: 4,
-          title: "Beginner’s Guide to Becoming a professional Front-End Developer",
-          chapter: "Chapter 4",
-          part: "part 2",
-          progress: 55,
-          mentor: {
-            name: "Eileen Schinner",
-            role: "Mentor",
-            avatar: testImg, 
-          },
-          image: "https://via.placeholder.com/150", 
-        },
-        {
-          id: 5,
-          title: "Beginner’s Guide to Becoming a professional Front-End Developer",
-          chapter: "Chapter 4",
-          part: "part 2",
-          progress: 55,
-          mentor: {
-            name: "Eileen Schinner",
-            role: "Mentor",
-            avatar: testImg, 
-          },
-          image: "https://via.placeholder.com/150", 
-        },
-        {
-          id: 6,
-          title: "Beginner’s Guide to Becoming a professional Front-End Developer",
-          chapter: "Chapter 4",
-          part: "part 2",
-          progress: 55,
-          mentor: {
-            name: "Eileen Schinner",
-            role: "Mentor",
-            avatar: testImg, 
-          },
-          image: "https://via.placeholder.com/150",
-        },
-        {
-          id: 7,
-          title: "Beginner’s Guide to Becoming a professional Front-End Developer",
-          chapter: "Chapter 4",
-          part: "part 2",
-          progress: 55,
-          mentor: {
-            name: "Eileen Schinner",
-            role: "Mentor",
-            avatar: testImg,
-          },
-          image: "https://via.placeholder.com/150", 
-        },
-  ]
 
   const tickets = [
     {
@@ -152,12 +76,27 @@ const MyLearning = () => {
   ]
 
 
+  const handleNextPage = () => {
+    if (page < coursesCompletionCards?.totalPages) {
+      setPage(prev => prev + 1);
+    }
+  }
+  
+  const handlePrevPage = () => {
+    if (page > 1) {
+      setPage(prev => prev - 1);
+    }
+  }
+  
+
+  console.log(coursesCompletionCards)
+
 
   return (
 
     <>
 
-      <div className="space-y-8">
+      <div className="space-y-8 p-8">
 
         {/* First row */}
         <div className="flex justify-between items-start w-full gap-4">
@@ -166,13 +105,13 @@ const MyLearning = () => {
 
               <h2 className="text-3xl font-semibold text-gray-900 mb-4">Continue Watching</h2>
         
-              <div className="absolute top-5 right-[100px] flex gap-3 p-2">
+              <div className="absolute top-5 right-[100px] flex gap-5 p-2">
 
-                <button className="bg-gray-100 p-2 rounded-full shadow hover:bg-gray-200">
+                <button onClick={handlePrevPage} disabled={page === 1} className="bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed p-2 rounded-full shadow hover:bg-gray-200">
                   <HiChevronLeft className="w-5 h-5 text-gray-700" />
                 </button>
         
-                <button className="bg-gray-100 p-2 rounded-full shadow hover:bg-gray-200">
+                <button onClick={handleNextPage} disabled={page === coursesCompletionCards?.totalPages} className="bg-gray-100 p-2 disabled:opacity-50 disabled:cursor-not-allowed rounded-full shadow hover:bg-gray-200">
                   <HiChevronRight className="w-5 h-5 text-gray-700" />
                 </button>
 
@@ -180,33 +119,65 @@ const MyLearning = () => {
         
               <div className="relative">
 
-                <div className="flex overflow-x-hidden gap-4 scrollbar-hide max-w-[1600px]">
+                {isLoadingCompletionCards ? (
 
-                  {courses.map((course, index) => (
+                  <p className="text-center text-xl font-semibold text-gray-500">Loading courses...</p>
 
-                    <div onClick={() => navigate(`/course/main-page/${course.id}`)} key={course.id} className={`min-w-[260px] cursor-pointer bg-white shadow-md rounded-lg p-3 ${index >= 5 ? 'opacity-50 transition-opacity' : ''}`}>
+                ) : coursesCompletionCards?.courses?.length === 0 ? (
+                  <p className="text-center text-xl font-semibold text-gray-500">No courses found</p>
+                ) : (
 
-                      <img src={courseImage} alt={course.title} className="rounded-md w-full h-32 object-cover" />
+                  <div className="flex gap-8 max-w-[1600px]">
 
-                      <h3 className="text-sm mr-2 font-semibold mt-2">{course.title}</h3>
-                      <p className="text-xs mt-2 text-gray-500">{course.chapter} - {course.part}</p>
-        
-                      <div className="flex items-center gap-2 mt-2">
-                        <img src={course.mentor.avatar} alt={course.mentor.name} className="w-6 h-6 rounded-full" />
-                        <p className="text-xs text-gray-600">{course.mentor.name} <span className="text-gray-400 ml-2">{course.mentor.role}</span></p>
+                    {coursesCompletionCards?.courses?.map((course) => (
+
+                      <div
+                        onClick={() => navigate(`/course/main-page/${course?.courseId}`)}
+                        key={course?.courseId}
+                        className={`min-w-[260px] cursor-pointer bg-white shadow-md rounded-lg p-3`}
+                      >
+
+                        <img
+                          src={`${baseUrl}${course?.course?.coursePic}`}
+                          alt={course?.course?.title}
+                          className="rounded-md w-[100%] h-32 object-cover"
+                        />
+
+                        <h3 className="text-sm text-[#000000] mr-2 capitalize font-semibold mt-2">{course?.course?.title}</h3>
+                        <p className="text-xs mt-2 text-[#979797]"> Chapter 3 - part 4 </p>
+
+                        <div className="flex items-center gap-2 mt-2">
+
+                          <img
+                            src={course?.course?.instructorId?.userObjRef?.profilePic ? `${baseUrl}${course?.course?.instructorId?.userObjRef?.profilePic}` : testImg}
+                            alt={course?.course?.instructorId?.userObjRef?.firstName}
+                            className="w-6 h-6 rounded-full"
+                          />
+
+                          <p className="text-xs font-semibold text-[#000000]">
+                            {course?.course?.instructorId?.userObjRef?.firstName} {course?.course?.instructorId?.userObjRef?.lastName}
+                            <span className="text-[#979797] font-semibold ml-2">mentor</span>
+                          </p>
+
+                          <span className='ml-auto'>
+                            <FaAngleRight/>
+                          </span>
+
+                        </div>
+
+                        <div className="relative w-full h-2 bg-gray-200 rounded-full mt-3">
+                          <div className="absolute h-full bg-purple-600 rounded-full" style={{ width: `${course.progress}` }}></div>
+                        </div>
+
+                        <p className="text-md font-semibold text-right text-gray-600 mt-1">{course.progress}</p>
+
                       </div>
-        
-                      <div className="relative w-full h-2 bg-gray-200 rounded-full mt-3">
-                        <div className="absolute h-full bg-purple-600 rounded-full" style={{ width: `${course.progress}%` }}></div>
-                      </div>
-        
-                      <p className="text-xs text-right text-gray-600 mt-1">{course.progress}%</p>
 
-                    </div>
+                    ))}
 
-                  ))}
+                  </div>
 
-                </div>
+                )}
 
               </div>
 
@@ -257,7 +228,7 @@ const MyLearning = () => {
               
               <h2 className="text-3xl font-semibold text-gray-900 mb-4">My Courses</h2>
               
-              <div className="flex items-center gap-12">
+              <div className="flex justify-between w-[100%] items-center gap-6">
 
                   <div className="relative">
 
@@ -272,179 +243,106 @@ const MyLearning = () => {
                       {['All Courses' , 'On Going' , 'Up Coming' , 'Completed'].map((filter , index) => (
 
                       <button key={index} className={`text-[22px] ${selectedFilter === filter ? 'text-[#FFC200] border-b-2 border-[#FFC200]' : 'text-gray-600'} focus:outline-none`} onClick={() => setSelectedFilter(filter)} >
-                          {filter}
+                        {filter}
                       </button>
 
                       ))}
 
                   </div>
 
+                  <div className='mr-16'>
+                    <PurpleBtn onClick={() => navigate("/enrolled-courses")} text="Show All Courses" />
+                  </div>
+ 
               </div>
 
               <div className='flex mt-6 flex-col p-4 justify-start gap-5 space-y-4'>
 
-                  <div className='flex max-w-[1550px] bg-white p-2 items-center gap-10 space-x-28'>
-                      
-                      <img src={courseImage} alt="" />
+              {isLoading ? (
+                 
+                <div className="flex text-xl justify-center items-center w-full">
+                  <span>Loading courses...</span> 
+                </div>
 
-                      <div className='flex flex-col items-start gap-3'>
+              ) : (
+                <>
+                  {coursesCompletion?.courses?.length === 0 ? (
 
-                          <span>Design System Basic</span>
+                    <div className="flex capitalize text-xl justify-center items-center w-full">
+                      <span>No courses available.</span>
+                    </div>
 
-                          <div className='flex items-center gap-3'>
-                              <img className='rounded-2xl h-6 w-6' src={testImg} alt="" />
-                              <span>MR .Imad . Teacher</span>
+                  ) : (
+                    coursesCompletion?.courses?.slice(0 , 4).map((course) => (
+
+                      <div key={course?.course?._id} className="flex max-w-[1550px] bg-white p-2 items-center gap-10 space-x-28">
+
+                        <img className="w-36 h-20" src={`${baseUrl}${course?.course?.coursePic}`} alt="" />
+
+                        <div className="flex flex-col items-start gap-3">
+
+                          <span className="capitalize text-lg text-[#002147] font-semibold">{course?.course?.title}</span>
+
+                          <div className="flex items-center gap-3">
+
+                            <img
+                              className="rounded-2xl h-6 w-6"
+                              src={course?.course?.instructorId?.userObjRef?.profilePic ? `${baseUrl}${course.course.instructorId.userObjRef.profilePic}` : testImg}
+                              alt=""
+                            />
+
+                            <span className="text-[#AFAFAF] font-semibold">
+                              {course?.course?.instructorId?.userObjRef?.firstName} {course?.course?.instructorId?.userObjRef?.lastName}
+                            </span>
+
                           </div>
 
-                      </div>
+                        </div>
 
-                      <div className='flex items-center flex-col gap-3'>
-                          <span>Duration</span>
-                          <span>4h 32m</span>
-                      </div>
+                        <div className="flex items-center flex-col gap-3">
+                          <span className="text-[#AFAFAF] font-semibold">Duration</span>
+                          <span className="text-[#002147] font-semibold">{course?.course?.duration} h</span>
+                        </div>
 
-                      <div className='flex flex-col items-center gap-5 mr-5'>
+                        <div className="flex flex-col items-center gap-5 mr-5">
 
-                          <span>Progress</span>
+                          <span className="text-[#AFAFAF] font-semibold">Progress</span>
 
                           <div className="relative w-[150px] h-2 bg-gray-200 rounded-full">
-                              <span className="absolute h-full bg-purple-600 rounded-full" style={{ width: "55%" }}></span>
-                              <span className="absolute -right-10 -top-1 text-xs text-gray-600">55%</span>
-                          </div>                    
-
-                      </div>
-
-                      <div className='flex items-center justify-center gap-8'>
-
-                          <div>
-                              <span className='text-[18px]'>16</span>
-                              <IoBook size={20}/>
-                          </div>
-                        
-                          <div>
-                              <span className='text-[18px]'>16</span>
-                              <FaPlayCircle size={20}/>
+                            <span className="absolute h-full bg-[#6555BC] rounded-full" style={{ width: course?.progress }}></span>
+                            <span className="absolute -right-10 -top-2 text-md text-[#002147] font-semibold">{course?.progress}</span>
                           </div>
 
-                      </div>
+                        </div>
 
-                      <div>
-                          <button className="bg-[#FFC200] p-4 rounded-lg flex items-center gap-2">
-                              <span className='text-[14px]'>Continue</span>
-                              <HiChevronRight />
-                          </button>
-                      </div>
+                        <div className="flex items-center justify-center gap-8">
 
-                  </div>
-
-                  <div className='flex max-w-[1550px] bg-white p-2 items-center gap-10 space-x-28'>
-                      
-                      <img src={courseImage} alt="" />
-
-                      <div className='flex flex-col items-start gap-3'>
-
-                          <span>Design System Basic</span>
-
-                          <div className='flex items-center gap-3'>
-                              <img className='rounded-2xl h-6 w-6' src={testImg} alt="" />
-                              <span>MR .Imad . Teacher</span>
+                          <div className="flex gap-2 items-center">
+                            <IoBook className="text-[#AFAFAF]" size={22} />
+                            <span className="text-[18px] mb-1 text-[#000000] font-semibold">{course?.course?.quizzes?.length}</span>
                           </div>
 
-                      </div>
-
-                      <div className='flex items-center flex-col gap-3'>
-                          <span>Duration</span>
-                          <span>4h 32m</span>
-                      </div>
-
-                      <div className='flex flex-col items-center gap-5 mr-5'>
-
-                          <span>Progress</span>
-
-                          <div className="relative w-[150px] h-2 bg-gray-200 rounded-full">
-                              <span className="absolute h-full bg-purple-600 rounded-full" style={{ width: "55%" }}></span>
-                              <span className="absolute -right-10 -top-1 text-xs text-gray-600">55%</span>
-                          </div>                    
-
-                      </div>
-
-                      <div className='flex items-center justify-center gap-8'>
-
-                          <div>
-                              <span className='text-[18px]'>16</span>
-                              <IoBook size={20}/>
-                          </div>
-                        
-                          <div>
-                              <span className='text-[18px]'>16</span>
-                              <FaPlayCircle size={20}/>
+                          <div className="flex gap-2 items-center">
+                            <FaPlayCircle className="text-[#AFAFAF]" size={22} />
+                            <span className="text-[20px] mb-1 text-[#000000] font-semibold">{course?.course?.sections?.length}</span>
                           </div>
 
-                      </div>
+                        </div>
 
-                      <div>
-                          <button className="bg-[#FFC200] p-4 rounded-lg flex items-center gap-2">
-                              <span className='text-[14px]'>Start</span>
-                              <HiChevronRight />
-                          </button>
-                      </div>
-
-                  </div>
-
-                  <div className='flex max-w-[1550px] bg-white p-2 items-center gap-10 space-x-28'>
-                      
-                      <img src={courseImage} alt="" />
-
-                      <div className='flex flex-col items-start gap-3'>
-
-                          <span>Design System Basic</span>
-
-                          <div className='flex items-center gap-3'>
-                              <img className='rounded-2xl h-6 w-6' src={testImg} alt="" />
-                              <span>MR .Imad . Teacher</span>
-                          </div>
+                        <div>
+                          {course?.progress === "0%" && <YellowBtn icon={HiChevronRight} text="Start" />}
+                          {course?.progress > "0%" && course?.progress < "100%" && <YellowBtn icon={HiChevronRight} text="Continue" />}
+                          {course?.progress === "100%" && <YellowBtn icon={HiChevronRight} text="Get Certificate" />}
+                        </div>
 
                       </div>
 
-                      <div className='flex items-center flex-col gap-3'>
-                          <span>Duration</span>
-                          <span>4h 32m</span>
-                      </div>
+                    ))
 
-                      <div className='flex flex-col items-center gap-5 mr-5'>
+                  )}
 
-                          <span>Progress</span>
-
-                          <div className="relative w-[150px] h-2 bg-gray-200 rounded-full">
-                              <span className="absolute h-full bg-purple-600 rounded-full" style={{ width: "55%" }}></span>
-                              <span className="absolute -right-10 -top-1 text-xs text-gray-600">55%</span>
-                          </div>                    
-
-                      </div>
-
-                      <div className='flex items-center justify-center gap-8'>
-
-                          <div>
-                              <span className='text-[18px]'>16</span>
-                              <IoBook size={20}/>
-                          </div>
-                        
-                          <div>
-                              <span className='text-[18px]'>16</span>
-                              <FaPlayCircle size={20}/>
-                          </div>
-
-                      </div>
-
-                      <div>
-                          <button className="bg-[#FFC200] p-4 rounded-lg flex items-center gap-2">
-                              <span className='text-[12px]'>View Certificate</span>
-                              <HiChevronRight />
-                          </button>
-                      </div>
-
-                  </div>
-                  
+                </>
+              )}
                 
               </div>
             
