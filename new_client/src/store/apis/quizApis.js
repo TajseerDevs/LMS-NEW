@@ -3,7 +3,7 @@ import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 
 const quizApi = createApi({
   reducerPath: "quizApi",
-  baseQuery: fetchBaseQuery({ baseUrl: "http://localhost:5500/api/v1/quiz" }),
+  baseQuery: fetchBaseQuery({ baseUrl: "http://10.10.30.40:5500/api/v1/quiz" }),
   endpoints: (builder) => ({
     getAllInstructorQuizzes: builder.query({
         query: ({ token , page }) => {

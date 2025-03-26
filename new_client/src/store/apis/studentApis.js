@@ -4,7 +4,7 @@ import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 
 const studentApi = createApi({
   reducerPath: "studentApi",
-  baseQuery: fetchBaseQuery({ baseUrl: "http://localhost:5500/api/v1/student" }),
+  baseQuery: fetchBaseQuery({ baseUrl: "http://10.10.30.40:5500/api/v1/student" }),
   endpoints: (builder) => ({
     getAllStudentCourses: builder.query({
       query: ({token}) => ({
@@ -91,11 +91,11 @@ const studentApi = createApi({
       }),
     }),
     setCourseLastProgress: builder.mutation({
-      query: ({token , courseId , sectionId , itemId}) => ({
+      query: ({token , courseId , sectionId , itemId , attachmentId}) => ({
         url: `/set-last-progress`,
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
-        body : {courseId , sectionId , itemId}
+        body : {courseId , sectionId , itemId , attachmentId}
       }),
     }),
     getCourseLastProgress: builder.query({

@@ -267,7 +267,7 @@ const QuizSubmission = () => {
 
 
 
-  if (loading) return <p className="text-center text-gray-600">Loading quiz...</p>
+  // if (loading) return <p className="text-center text-gray-600">Loading quiz...</p>
 
 
 
@@ -296,7 +296,8 @@ const QuizSubmission = () => {
 
         <div className='flex items-start mr-4 gap-1 flex-col'>
           <h1 className="text-md capitalize text-[#002147] font-bold">Due Date : <span className='text-[#000000]'>{formatDate(quiz?.dueDate)}</span></h1>
-          <h1 className="text-md capitalize flex items-center gap-1 text-[#002147] font-bold">Timer : <span className='text-[#000000]'><TimerComponent onTimeUp={onTimeUp} quizId={quiz?._id} duration={quiz?.duration}/></span></h1>
+          {/* bug should be fixed , time issue */}
+          {/* <h1 className="text-md capitalize flex items-center gap-1 text-[#002147] font-bold">Timer : <span className='text-[#000000]'><TimerComponent onTimeUp={onTimeUp} quizId={quiz?._id} duration={quiz?.duration}/></span></h1> */}
         </div>
 
       </div>

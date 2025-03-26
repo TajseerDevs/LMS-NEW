@@ -22,7 +22,7 @@ const app = express()
 
 
 app.use(cors({
-  origin : "http://localhost:3000",
+  origin : "http://10.10.30.40:3000",
   credentials: true
 }))
 

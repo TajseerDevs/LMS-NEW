@@ -6,7 +6,7 @@ const useSocket = () => {
 
   const user = useSelector((state) => state.user)
 
-  const socket = io("http://localhost:5000", {
+  const socket = io("http://10.10.30.40:5000", {
     extraHeaders: {
       Authorization: `Bearer ${user?.token}`,
     },

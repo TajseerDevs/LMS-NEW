@@ -2,7 +2,7 @@
 
 const passwordResetTemplate = (resetToken) => {
 
-    const resetUrl = `http://localhost:3000/user/reset-password/${resetToken}`;
+    const resetUrl = `http://10.10.30.40:3000/user/reset-password/${resetToken}`;
   
     return `
     <!DOCTYPE html>

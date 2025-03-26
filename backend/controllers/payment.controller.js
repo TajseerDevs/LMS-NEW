@@ -37,7 +37,7 @@ const createCheckoutSession = async (req , res , next) => {
                     currency : "usd" ,
                     product_data : {
                         name : course.title ,
-                        images: [`http://localhost:5500/${course.coursePic}`]  // needs check to check if i must add the uploads/images or the coursePic already have it as string
+                        images: [`http://10.10.30.40:5500/${course.coursePic}`]  // needs check to check if i must add the uploads/images or the coursePic already have it as string
                     },
                     unit_amount : productPrice
                 },

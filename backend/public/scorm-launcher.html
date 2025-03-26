@@ -15,11 +15,22 @@
         height: 100vh;
       }
       #loader {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        display: none;
+        display: flex;
+        align-items: center;
+        justify-items: center;
+        text-align: center;
+      }
+      .spinner {
+        border: 8px solid #f3f3f3; /* Light grey */
+        border-top: 8px solid #3498db; /* Blue */
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        animation: spin 2s linear infinite;
+      }
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
       }
       iframe {
         width: 100vw;
@@ -83,6 +94,8 @@
           const urlParams = new URLSearchParams(window.location.search);
           return urlParams.get(param);
         }
+
+        console.log(launchUrl)
         
         if (!launchUrl || !userId || !attachmentId) {
           console.error("Error: Missing required parameters.");
@@ -97,9 +110,10 @@
           return
         }
 
+
         
         const studentName = username; 
-        const apiUrl = "http://localhost:5500/api/v1/scorm";
+        const apiUrl = "http://10.10.30.40:5500/api/v1/scorm";
 
         const apiSettings = {
           lmsCommitUrl: `${apiUrl}/${userId}/${attachmentId}/set-log`,
@@ -199,15 +213,15 @@
       function fetchInitialAPI(apiUrl, userId, attachmentId, token , username) {
 
         const contentCmi = {
-          student_id: userId,
-          student_name: username,
-          lesson_status: "incomplete",
-        };
+          student_id : userId,
+          student_name : username,
+          lesson_status : "incomplete",
+        }
 
         const payload = {
           cmi: {},
           contentCmi,
-        };
+        }
 
         fetch(`${apiUrl}/${userId}/${attachmentId}/set-log`, {
           method: "POST",
@@ -226,7 +240,7 @@
       // could be removed
       function fetchCourseCompletionAPI(courseId, token) {
 
-        fetch(`http://localhost:5500/api/v1/student/course-completion-percentage/${courseId}`, {
+        fetch(`http://10.10.30.40:5500/api/v1/student/course-completion-percentage/${courseId}`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
@@ -357,7 +371,6 @@
   <body>
     <div id="main">
       <div id="loader">
-        <p>Loading SCORM course...</p>
       </div>
       <p class="message"></p>
       

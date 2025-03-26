@@ -9,7 +9,7 @@ import { useNavigate } from 'react-router-dom';
 
 const EnrolledCoursesCard = ({course}) => {
 
-  const baseUrl = "http://localhost:5500"
+  const baseUrl = "http://10.10.30.40:5500"
 
   const navigate = useNavigate()
 

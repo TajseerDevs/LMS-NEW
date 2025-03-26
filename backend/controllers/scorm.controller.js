@@ -22,9 +22,32 @@ const Lesson = require("../models/ScormLogSchema");
       const { userId, attachmentId } = req.params
       const { cmi , contentCmi } = req.body
       
+      let studentDoc
+
       try {
 
+        const user = await User.findById(userId)
+        
+        if(!user){
+          return next(createError("User not exist" , 404))
+        }
+
+        if(user.role === "student"){
+
+          studentDoc = await Student.findOne({userObjRef : user._id})
+
+          if(!studentDoc){
+            return next(createError("Student not exist" , 404))
+          }
+          
+        }
+
         const attachment = await Attachment.findById(attachmentId)
+
+        if(!attachment){
+          return next(createError("item attachment not exist" , 404))
+        }
+
         const scormVersion = attachment.scormVersion;
     
         const interactions = Object.entries(cmi?.interactions || {}).map(([key, value]) => ({ key , ...value}))
@@ -32,6 +55,10 @@ const Lesson = require("../models/ScormLogSchema");
         let lesson = await ScormLog.findOne({ userId, attachement: attachmentId })
 
         const attachementCourse = await Course.findById(attachment.courseId)
+
+        if(!attachementCourse){
+          return next(createError("attachment course not exist" , 404))          
+        }
         
         const lessonData = {
           userId,
@@ -54,15 +81,18 @@ const Lesson = require("../models/ScormLogSchema");
           courseId : attachementCourse._id ,
           completionPercentage : contentCmi?.completionPercentage || 0
         }
-
-
     
         if (lesson) {
+
           const currentLessonStatus = lesson.lesson_status;
+
           if (currentLessonStatus === "passed" || currentLessonStatus === "completed") {
             lessonData.lesson_status = currentLessonStatus;
+            return res.status(200).json({ msg: "Log data saved successfully." })
           }
+
           await lesson.updateOne(lessonData)
+
         } else {
           lesson = new ScormLog(lessonData)
           await lesson.save()

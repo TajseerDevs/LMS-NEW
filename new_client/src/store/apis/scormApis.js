@@ -3,7 +3,7 @@ import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 
 const scormApi = createApi({
   reducerPath: "scormApi",
-  baseQuery: fetchBaseQuery({ baseUrl: "http://localhost:5500/api/v1/scorm" }),
+  baseQuery: fetchBaseQuery({ baseUrl: "http://10.10.30.40:5500/api/v1/scorm" }),
   endpoints: (builder) => ({
     getAllUserLogs: builder.query({
         query: ({ token }) => {

@@ -14,7 +14,7 @@ import { FiFile } from "react-icons/fi"
 
 const MessagesPanel = () => {
 
-  const baseUrl = `http://localhost:5500`
+  const baseUrl = `http://10.10.30.40:5500`
   
   const {token , user} = useSelector((state) => state.user)
   const socket = useSocketContext()

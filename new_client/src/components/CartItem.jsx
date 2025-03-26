@@ -10,7 +10,7 @@ import { MdDelete, MdFavoriteBorder } from 'react-icons/md'
 const CartItem = ({item , refetch}) => {
 
 
-    const baseUrl = `http://localhost:5500`
+    const baseUrl = `http://10.10.30.40:5500`
 
     const { user , token} = useSelector((state) => state.user)
     const { cart , total , subTotal } = useSelector((state) => state.cart)

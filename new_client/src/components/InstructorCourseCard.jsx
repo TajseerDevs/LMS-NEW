@@ -11,7 +11,7 @@ import { CgInsights } from "react-icons/cg";
 import { IoTicket } from "react-icons/io5";
 
 
-const baseUrl = `http://localhost:5500`
+const baseUrl = `http://10.10.30.40:5500`
 
 
 const getStatusStyles = (status) => {

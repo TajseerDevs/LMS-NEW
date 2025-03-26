@@ -22,6 +22,7 @@ import MCInputes from '../../components/MCInputes'
 import FBInputs from '../../components/FBInputs';
 import MatchInputs from '../../components/MatchInputs';
 import DDInputs from '../../components/DDInputs';
+import YellowBtn from '../../components/YellowBtn';
 
 
 
@@ -181,13 +182,15 @@ const CreateQuiz = () => {
 
 
   const goToStepThree = () => {
-    if(activeStep === 2 && quizData?.questions.length !== 0){
+    if(activeStep === 2 && quizQuestions?.length !== 0){
       setActiveStep(3)
     }else{
       return
     }
   }
 
+  console.log(activeStep)
+  console.log(quizQuestions)
 
 
   const {data : instructorCourses} = useGetAllInstructorCoursesNoPagingQuery({token})
@@ -322,11 +325,17 @@ const CreateQuiz = () => {
                 <div className='text-[#002147] mb-1 flex items-center gap-4 font-semibold text-2xl'>
                   <FaAngleLeft size={25}/>
                   <span className='mb-1'>Quiz : {quizData?.title}</span>
+                  {activeStep === 2 &&  quizQuestions?.length !== 0 && <YellowBtn onClick={goToStepThree} text="complete step three" />}
                 </div>
 
-                <span className='ml-6 mt-3 text-[#545454] font-semibold text-lg'>
-                  {quizData?.description}
-                </span>
+                <div>
+
+                  <span className='ml-6 mt-3 text-[#545454] font-semibold text-lg'>
+                    {quizData?.description}
+                  </span>
+
+
+                </div>
 
               </div>
 

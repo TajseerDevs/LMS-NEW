@@ -14,7 +14,7 @@ import { useEnrollFreeCourseMutation } from "../store/apis/studentApis";
 
 const CourseCard = ({ data , refetchStudentNotEnrolledCourses , refetchEnrolledCourses , navigate }) => {
 
-  const baseUrl = "http://localhost:5500";
+  const baseUrl = "http://10.10.30.40:5500";
 
   const {user , token} = useSelector((state) => state.user)
   const {cart} = useSelector((state) => state.cart)

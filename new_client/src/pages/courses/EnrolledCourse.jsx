@@ -53,8 +53,12 @@ const EnrolledCourse = () => {
 
     const [course, setCourse] = useState(null)
     const [error, setError] = useState(null)
+
     const [launchUrl, setLaunchUrl] = useState("")
-    const [defaultLaunchUrl, setdefaultLaunchUrl] = useState("https://www.youtube.com/embed/ZCX9u9KZSwc")
+    const [defaultLaunchUrl, setdefaultLaunchUrl] = useState("https://www.youtube.com/embed/ZCX9u9KZS")
+    const [prevLaunchUrl, setPrevLaunchUrl] = useState(null)
+    
+
     const [attachmentId, setAttachmentId] = useState("")
     const [expandedSections, setExpandedSections] = useState([])
     const [attachment, setAttachment] = useState({})
@@ -134,9 +138,6 @@ const EnrolledCourse = () => {
     const {data : courseLastProgress} = useGetCourseLastProgressQuery({token , courseId})
 
 
-    console.log(courseLastProgress)
-
-
 
     // to not open the course rate pop up if the user already provide a feedback 
     useEffect(() => { 
@@ -147,7 +148,6 @@ const EnrolledCourse = () => {
     } , [])
 
 
-    
 
     useEffect(() => {
 
@@ -162,6 +162,12 @@ const EnrolledCourse = () => {
         // }
 
     } , [courseCompletionData, ])
+
+
+
+    useEffect(() => {
+        
+    } , [selectedSection])
     
 
 
@@ -174,8 +180,8 @@ const EnrolledCourse = () => {
                 
                 const response = await axiosObj.get(`/courses/${courseId}` , {
                     headers : {
-                        Authorization : `Bearer ${token}`
-                    }
+                            Authorization : `Bearer ${token}`
+                        }
                 })
 
                 const courseData = response.data
@@ -213,8 +219,8 @@ const EnrolledCourse = () => {
 
 
 
-    const handleAttachmentClick = async (attachmentId , item) => {
 
+    const handleAttachmentClick = async (attachmentId , item , section) => {
 
         setIframeOpenedAt(Date.now())
         refetch()
@@ -226,21 +232,32 @@ const EnrolledCourse = () => {
         
         try {
 
-            await setCourseLastProgress({token , courseId , sectionId : selectedSection?._id , itemId : selectedItem?._id})
-
             const downloadResponse = await axiosObj.get(`/courses/download/${attachmentId}`, {
                 headers: { Authorization: `Bearer ${token}` },
             })
+
+            const newLaunchUrl = `http://10.10.30.40:5500${downloadResponse.data.launchUrl}`
+
+            if (newLaunchUrl !== prevLaunchUrl) {
+                setLaunchUrl(newLaunchUrl)
+                setPrevLaunchUrl(newLaunchUrl)
+            }
             
             const launchUrl = downloadResponse.data.launchUrl
-            setLaunchUrl(`http://localhost:5500${launchUrl}`)
+            setLaunchUrl(`http://10.10.30.40:5500${launchUrl}`)
             setAttachmentId(attachmentId)
-
+            
             const response = await axiosObj.get(`/courses/item-attachment/${attachmentId}`, {
                 headers: { Authorization: `Bearer ${token}` },
             })
             
             setAttachment(response.data)
+
+            console.log()
+
+            await setCourseLastProgress({token , courseId , sectionId : selectedSection?._id || section?._id , itemId : item?._id , attachmentId})
+
+            await incrementAttachmentView({token , courseId , sectionId: selectedSection?._id || section?._id , attachmentId})
 
         } catch (error) {
             console.log(error)
@@ -250,93 +267,141 @@ const EnrolledCourse = () => {
 
 
 
+
     useEffect(() => {
-        if (courseLastProgress?.courseLastProgress?.progress?.sectionId && courseLastProgress?.courseLastProgress?.progress?.itemId) {
-            console.log("ok")
-            // openAttachmentById(courseLastProgress.sectionId, courseLastProgress.itemId)
+
+        const openCourseLastProgress = async () => {
+            try {
+                await openAttachmentById(courseLastProgress?.courseLastProgress , courseLastProgress?.courseSections)
+            } catch (error) {
+                console.log(error)
+            }
         }
-    }, [courseLastProgress])
+
+        if (courseLastProgress?.courseLastProgress?.progress?.sectionId && courseLastProgress?.courseLastProgress?.progress?.itemId) {
+            openCourseLastProgress()
+        }
+
+    }, [courseLastProgress , navigate])
       
+
 
 
 
     // ! TODO , to be completed
-    const openAttachmentById = (sectionId , itemId) => {
-
-        const sectionIndex = course?.sections?.findIndex(section => section._id === sectionId)
+    const openAttachmentById = async (lastProgress , courseSections) => {
         
+        const {progress} = lastProgress
+
+        const sectionObj = courseSections?.find(section => section?._id === progress?.sectionId)
+        if(!sectionObj) return
+
+        const itemObj = sectionObj?.items?.find(item => item?._id === progress?.itemId)
+        if(!itemObj) return
+
+        const attachmentObj = itemObj?.attachments?.find(attachment => attachment?._id === progress?.attachmentId)
+        if(!attachmentObj) return
+
+        const sectionIndex = course?.sections?.findIndex(section => section._id === progress?.sectionId)
         if (sectionIndex === -1) return
-    
+        
         const sectionAttachments = getAttachmentsInSection(sectionIndex)
-    
-        const attachmentIndex = sectionAttachments.findIndex(attachment => attachment._id === itemId)
-    
-        if (attachmentIndex === -1) return
-    
+
+        const attachmentIndex = sectionAttachments.findIndex(attachment => attachment._id === progress?.attachmentId)
+        if (attachmentIndex === -1) return          
+
+        setSelectedSection(sectionObj)
         setCurrentSectionIndex(sectionIndex)
         setCurrentAttachmentIndex(attachmentIndex)
-    
-        handleAttachmentClick(itemId, attachmentIndex, sectionIndex)
-    
+
+        await handleAttachmentClick(progress?.attachmentId , itemObj , sectionObj)
+
     }
     
 
 
+    const navigateAttachments = async (direction) => {
 
-    const navigateAttachments = (direction) => {
-
+        const currentSection = course?.sections?.[currentSectionIndex]
         const currentSectionAttachments = getAttachmentsInSection(currentSectionIndex)
-      
-        if (!currentSectionAttachments || currentSectionAttachments.length === 0) return
-      
+
+        if (!currentSection || !currentSectionAttachments?.length) return
+
         if (direction === "next") {
-          if (currentAttachmentIndex < currentSectionAttachments.length - 1) {
-            setCurrentAttachmentIndex((prev) => prev + 1);
-            handleAttachmentClick(
-              currentSectionAttachments[currentAttachmentIndex + 1]._id,
-              currentAttachmentIndex + 1,
-              currentSectionIndex
-            );
-          } else if (currentSectionIndex < course?.sections?.length - 1) {
-            const nextSectionAttachments = getAttachmentsInSection(currentSectionIndex + 1);
-            if (nextSectionAttachments?.length) {
-              setCurrentSectionIndex((prev) => prev + 1);
-              setCurrentAttachmentIndex(0);
-              handleAttachmentClick(
-                nextSectionAttachments[0]._id,
-                0,
-                currentSectionIndex + 1
-              );
+
+            if (currentAttachmentIndex < currentSectionAttachments.length - 1) {
+
+                setCurrentAttachmentIndex((prev) => prev + 1)
+
+                const nextAttachment = currentSectionAttachments[currentAttachmentIndex + 1]
+                const nextItem = currentSection?.items?.find(item => item?.attachments?.some(attachment => attachment?._id === nextAttachment?._id))
+
+                if (nextItem) {
+                    await handleAttachmentClick(nextAttachment?._id , nextItem , currentSection)
+                }
+
+            } else if (currentSectionIndex < course?.sections?.length - 1) {
+
+                const nextSection = course?.sections?.[currentSectionIndex + 1]
+                const nextSectionAttachments = getAttachmentsInSection(currentSectionIndex + 1)
+
+                if (nextSection && nextSectionAttachments?.length) {
+
+                    setCurrentSectionIndex((prev) => prev + 1)
+                    setCurrentAttachmentIndex(0)
+
+                    const firstAttachment  = nextSectionAttachments[0]
+                    const firstItem = nextSection?.items?.find(item => item?.attachments?.some(attachment => attachment?._id === firstAttachment?._id))
+
+                    if (firstItem) {
+                        await handleAttachmentClick(firstAttachment._id, firstItem, nextSection)
+                    }
+
+                }
+
             }
-          }
+
         }
-      
-    
+
         if (direction === "prev") {
-          
-          if (currentAttachmentIndex > 0) {
-            setCurrentAttachmentIndex((prev) => prev - 1);
-            handleAttachmentClick(
-              currentSectionAttachments[currentAttachmentIndex - 1]._id,
-              currentAttachmentIndex - 1,
-              currentSectionIndex
-            );
-          } else if (currentSectionIndex > 0) {
-            const prevSectionAttachments = getAttachmentsInSection(currentSectionIndex - 1);
-            if (prevSectionAttachments?.length) {
-              setCurrentSectionIndex((prev) => prev - 1);
-              setCurrentAttachmentIndex(prevSectionAttachments.length - 1);
-              handleAttachmentClick(
-                prevSectionAttachments[prevSectionAttachments.length - 1]._id,
-                prevSectionAttachments.length - 1,
-                currentSectionIndex - 1
-              );
+
+            if (currentAttachmentIndex > 0) {
+
+                setCurrentAttachmentIndex((prev) => prev - 1)
+
+                const prevAttachment = currentSectionAttachments[currentAttachmentIndex - 1]
+
+                const prevItem = currentSection.items?.find(item => item?.attachments?.some(attachment => attachment?._id === prevAttachment?._id))
+
+                if (prevItem) {
+                    await handleAttachmentClick(prevAttachment?._id , prevItem , currentSection)
+                }
+        
+            } else if (currentSectionIndex > 0) {
+
+                const prevSection = course?.sections?.[currentSectionIndex - 1]
+                const prevSectionAttachments = getAttachmentsInSection(currentSectionIndex - 1)
+
+                if (prevSection && prevSectionAttachments?.length) {
+
+                    setCurrentSectionIndex((prev) => prev - 1)
+                    setCurrentAttachmentIndex(prevSectionAttachments.length - 1)
+
+                    const lastAttachment = prevSectionAttachments[prevSectionAttachments.length - 1]
+                    const lastItem = prevSection?.items?.find(item => item?.attachments?.some(attachment => attachment?._id === lastAttachment?._id))
+
+                    if (lastItem) {
+                        await handleAttachmentClick(lastAttachment?._id , lastItem , prevSection)
+                    }
+                    
+                }
+
             }
-          }
+
         }
 
     }
-    
+
 
 
     const getAttachmentsInSection = (sectionIndex) => {
@@ -465,6 +530,7 @@ const EnrolledCourse = () => {
     }
 
 
+
     const markAsCompleted = async (attachmentId) => {
         
         const duration = iframeOpenedAt ? Math.floor((Date.now() - iframeOpenedAt) / 1000) : 0
@@ -571,14 +637,14 @@ const EnrolledCourse = () => {
     <div className="flex p-6">
 
       {/* Left Course Content */} 
-      <div className="w-3/4 h-[750px] bg-gray-100 p-4 rounded-md">
+      <div className="w-full h-[750px] bg-gray-100 p-4 rounded-md">
 
         {
             launchUrl ? 
             (
 
                 <iframe
-                    src={`http://localhost:5500/public/scorm-launcher.html?launchUrl=${encodeURIComponent(
+                    src={`http://10.10.30.40:5500/public/scorm-launcher.html?launchUrl=${encodeURIComponent(
                     launchUrl
                     )}&userId=${encodeURIComponent(
                     user?._id
@@ -590,10 +656,9 @@ const EnrolledCourse = () => {
                     &duration=${encodeURIComponent(Math.floor((Date.now() - iframeOpenedAt) / 1000))}
                     &type=${encodeURIComponent(attachment?.type)}&courseId=${encodeURIComponent(courseId)}`}
                     title="SCORM Content"
-                    width="100%"
-                    height="600px"
+                    style={{width : "100%" , height : "100%"}}
                     key={launchUrl} 
-              />
+                />
 
             ) 
             :
@@ -1210,17 +1275,11 @@ const EnrolledCourse = () => {
 
             <div key={section?._id} className='bg-white border-b w-full border-gray-300 p-4'>
 
-                <div onClick={() => {toggleSection(section?._id) ; handleSectionSelect(section)}} className='flex justify-between cursor-pointer items-center'>
+                <div key={section?._id} onClick={() => {toggleSection(section?._id) ; handleSectionSelect(section)}} className='flex justify-between cursor-pointer items-center'>
 
                     <div className='flex cursor-pointer flex-col gap-2'>
                     
-                        <span className='font-semibold text-[18px]' onClick={async () => {
-                            try {
-                                toggleSection(section?._id)
-                            } catch (error) {
-                                console.log(error)
-                            }
-                        }}>
+                        <span className='font-semibold text-[18px]'>
                             Module {sectionIndex + 1} : {section?.name}
                         </span>
 
@@ -1244,33 +1303,33 @@ const EnrolledCourse = () => {
                     
                     <div className='w-full flex flex-col gap-3'>
 
-                        {section?.items?.map((item , itemIndex) => (
+                            {section?.items?.map((item, itemIndex) => (
 
-                            <div key={item?._id} className='flex cursor-pointer justify-between items-center w-full mt-4'
-                                onClick={async () => {
-                                    try {
-                                        console.log("Clicked item:", item);
-                                        console.log("Item ID:", item?._id);
-                                        setSelectedItem(item)
-                                        selectAttachment(sectionIndex , itemIndex)
-                                        await handleAttachmentClick(item?.attachments[0]?._id , item)
-                                        await incrementAttachmentView({token , courseId , sectionId : section?._id , attachmentId : item?.attachments[0]?._id})
-                                    } catch (error) {
-                                        console.log(error)
-                                    }
-                                }} 
-                            >
+                                <div
+                                    key={item?._id}
+                                    className="flex cursor-pointer justify-between items-center w-full mt-4"
+                                    onClick={async () => {
+                                        try {
+                                            setSelectedItem(item); 
+                                            selectAttachment(sectionIndex, itemIndex)
+                                            const attachmentId = item?.attachments[0]?._id;
+                                            await handleAttachmentClick(attachmentId, item)
+                                        } catch (error) {
+                                            console.log(error)
+                                        }
+                                    }}
+                                >
+                                    <div className="flex mt-2 items-center gap-4">
+                                        {getItemIcon(item?.type)}
+                                        <span className="font-semibold text-[18px]">{item?.name}</span>
+                                    </div>
 
-                                <div className='flex mt-2 items-center gap-4'>
-                                    {getItemIcon(item?.type)}
-                                    <span className='font-semibold text-[18px]'>{item?.name}</span>
+                                    <span className="ml-auto text-[18px] font-semibold mr-2 text-gray-600">
+                                        {formatTimeWithLabels(item?.estimatedTime)}
+                                    </span>
+
                                 </div>
-
-                                <span className='ml-auto text-[18px] font-semibold mr-2 text-gray-600'>{formatTimeWithLabels(item?.estimatedTime)}</span>
-                            
-                            </div>
-
-                        ))}
+                            ))} 
 
                     </div>
 
@@ -1331,3 +1390,68 @@ export default EnrolledCourse
 //       checkEnrollment();
 //     }
 //   }, [courseId, token, navigate]);
+
+
+
+
+
+
+
+
+
+
+// PREV STABLE VERSION
+// const navigateAttachments = async (direction) => {
+
+//     const currentSectionAttachments = getAttachmentsInSection(currentSectionIndex)
+  
+//     if (!currentSectionAttachments || currentSectionAttachments.length === 0) return
+  
+//     if (direction === "next") {
+
+//       if (currentAttachmentIndex < currentSectionAttachments.length - 1) {
+//         setCurrentAttachmentIndex((prev) => prev + 1);
+//         handleAttachmentClick(
+//           currentSectionAttachments[currentAttachmentIndex + 1]._id,
+//           currentAttachmentIndex + 1,
+//           currentSectionIndex
+//         )
+//       } else if (currentSectionIndex < course?.sections?.length - 1) {
+//         const nextSectionAttachments = getAttachmentsInSection(currentSectionIndex + 1);
+//         if (nextSectionAttachments?.length) {
+//           setCurrentSectionIndex((prev) => prev + 1);
+//           setCurrentAttachmentIndex(0);
+//           handleAttachmentClick(
+//             nextSectionAttachments[0]._id,
+//             0,
+//             currentSectionIndex + 1
+//           );
+//         }
+//       }
+//     }
+  
+
+//     if (direction === "prev") {
+      
+//       if (currentAttachmentIndex > 0) {
+//         setCurrentAttachmentIndex((prev) => prev - 1);
+//         handleAttachmentClick(
+//           currentSectionAttachments[currentAttachmentIndex - 1]._id,
+//           currentAttachmentIndex - 1,
+//           currentSectionIndex
+//         );
+//       } else if (currentSectionIndex > 0) {
+//         const prevSectionAttachments = getAttachmentsInSection(currentSectionIndex - 1);
+//         if (prevSectionAttachments?.length) {
+//           setCurrentSectionIndex((prev) => prev - 1);
+//           setCurrentAttachmentIndex(prevSectionAttachments.length - 1);
+//           handleAttachmentClick(
+//             prevSectionAttachments[prevSectionAttachments.length - 1]._id,
+//             prevSectionAttachments.length - 1,
+//             currentSectionIndex - 1
+//           );
+//         }
+//       }
+//     }
+
+// }

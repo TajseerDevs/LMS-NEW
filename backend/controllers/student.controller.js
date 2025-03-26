@@ -2332,15 +2332,13 @@ const exportPdfNotes = async (req, res, next) => {
 }
 
 
-
-
 const setCourseLastProgress = async (req , res , next) => {
 
   try {
     
-    const { courseId , sectionId , itemId } = req.body
+    const { courseId , sectionId , itemId , attachmentId } = req.body
   
-    if (!courseId || !sectionId || !itemId) {
+    if (!courseId || !sectionId || !itemId || !attachmentId) {
       return next(createError("Missing required fields" , 404))
     }
 
@@ -2359,6 +2357,7 @@ const setCourseLastProgress = async (req , res , next) => {
       existCourseProgress.progress = {
         sectionId ,
         itemId ,
+        attachmentId ,
         timestamp
       }
 
@@ -2366,7 +2365,7 @@ const setCourseLastProgress = async (req , res , next) => {
       // If the course last progress doesn't exist , create a new entry
       student.courseProgress.push({
         courseId , 
-        progress : {sectionId , itemId , timestamp}
+        progress : {sectionId , itemId , attachmentId , timestamp}
       })
 
     }

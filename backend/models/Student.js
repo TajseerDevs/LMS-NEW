@@ -35,6 +35,7 @@ const StudentSchema = new mongoose.Schema({
       progress: {
         sectionId: { type: mongoose.Schema.Types.ObjectId, ref: "sections" },
         itemId: { type: mongoose.Schema.Types.ObjectId, ref: "items" },
+        attachmentId: { type: mongoose.Schema.Types.ObjectId, ref: "attachments" },
         timestamp: { type: Date },       
       },
     },

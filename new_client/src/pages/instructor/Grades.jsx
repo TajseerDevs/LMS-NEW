@@ -12,7 +12,7 @@ import YellowBtn from '../../components/YellowBtn'
 
 const Grades = () => {
 
-  const baseUrl = `http://localhost:5500`
+  const baseUrl = `http://10.10.30.40:5500`
 
   const {token} = useSelector((state) => state.user)
   const navigate = useNavigate()
