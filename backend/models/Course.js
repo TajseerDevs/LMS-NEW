@@ -3,28 +3,6 @@ const { Attachment , attachmentSchema } = require("./Attachment")
 
 
 
-const NoteSchema = new mongoose.Schema({
-  userId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "students",
-    required: true,
-  },
-  content: {
-    type: String,
-    required: false, 
-  },
-  audioUrl: {
-    type: String,
-    required: false,
-  },
-  timestamp: {
-    type: Date,
-    default: Date.now,
-  },
-}, { _id: true });
-
-
-
 const ItemSchema = new mongoose.Schema({
   type: String,
   name: String,
@@ -36,7 +14,6 @@ const ItemSchema = new mongoose.Schema({
     }
   ],
   attachments: [attachmentSchema],
-  notes: [NoteSchema],
   estimatedTime: {
     hours: { type: Number, default: 0 },
     minutes: { type: Number, default: 0 },

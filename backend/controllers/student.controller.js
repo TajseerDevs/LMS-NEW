@@ -1651,12 +1651,22 @@ const addReminder = async (req, res, next) => {
 
     let normalizedReminderDateTime = reminderDateTime
 
-    if (reminderType === 'once') {
-      const date = new Date(reminderDateTime)
-      date.setHours(0, 0, 0, 0)
-      normalizedReminderDateTime = date
-    }
 
+    if (reminderType === "once") {
+
+      const now = new Date()
+      now.setHours(0, 0, 0, 0)
+
+      const reminderDate = new Date(reminderDateTime)
+      reminderDate.setHours(0, 0, 0, 0)
+
+      if (reminderDate < now) {
+        return next(createError("Reminder date must not less than current date", 400))
+      }
+
+      normalizedReminderDateTime = reminderDate
+
+    }
 
     const reminder = new Reminder({
       studentId : user._id ,
@@ -1691,14 +1701,16 @@ const getAllReminders = async (req, res, next) => {
 
   try {
 
+    const {courseId} = req.params
+
     const page = parseInt(req.query.page) || 1
-    const limit = parseInt(req.query.limit) || 10
+    const limit = 3
 
     const skip = (page - 1) * limit
 
-    const reminders = await Reminder.find({}).skip(skip).limit(limit)
+    const reminders = await Reminder.find({courseId}).skip(skip).limit(limit).sort({createdAt : -1})
 
-    const totalReminders = await Reminder.countDocuments({})
+    const totalReminders = await Reminder.countDocuments({courseId})
 
     const totalPages = Math.ceil(totalReminders / limit)
 
@@ -1717,25 +1729,23 @@ const getAllReminders = async (req, res, next) => {
 
 
 
-
 const updateReminder = async (req, res, next) => {
 
   try {
 
     const reminderId = req.params.reminderId
-
     const userId = req.user._id
     
     const user = await User.findById(userId)
-    
+
     if (!user) {
-      return next(createError("Not Authorized" , 401))
+      return next(createError("Not Authorized", 401))
     }
 
-    const studentDoc = await Student.findOne({userObjRef : userId})
+    const studentDoc = await Student.findOne({ userObjRef: userId })
 
-    if(!studentDoc){
-      return next(createError("Student not exist" , 404))
+    if (!studentDoc) {
+      return next(createError("Student not exist", 404))
     }
 
     const reminderValidationSchema = Joi.object({
@@ -1753,15 +1763,31 @@ const updateReminder = async (req, res, next) => {
           otherwise: Joi.forbidden(),
         })
         .optional(),
-    });
+    })
 
-    const { error , value } = reminderValidationSchema.validate(req.body, { abortEarly: false })
+    const { error, value } = reminderValidationSchema.validate(req.body, { abortEarly: false })
 
     if (error) {
       return next(createError(error.details.map((err) => err.message), 400))
     }
 
-    const updatedReminder = await Reminder.findByIdAndUpdate(reminderId , value , { new: true })
+    let normalizedReminderDateTime = value.reminderDateTime
+
+    if (value.reminderType === "once" && value.reminderDateTime) {
+      const now = new Date()
+      now.setHours(0, 0, 0, 0)
+
+      const reminderDate = new Date(value.reminderDateTime)
+      reminderDate.setHours(0, 0, 0, 0)
+
+      if (reminderDate < now) {
+        return next(createError("Reminder date must not be less than the current date", 400))
+      }
+
+      normalizedReminderDateTime = reminderDate
+    }
+
+    const updatedReminder = await Reminder.findByIdAndUpdate(reminderId, { ...value, reminderDateTime: normalizedReminderDateTime }, { new: true });
 
     if (!updatedReminder) {
       return next(createError("Reminder not found", 404))
@@ -1774,6 +1800,7 @@ const updateReminder = async (req, res, next) => {
   }
 
 }
+
 
 
 
@@ -1870,14 +1897,8 @@ const addNote = async (req , res , next) => {
 
   try {
     
-    const { courseId , sectionId , itemId } = req.params
+    const { courseId  } = req.params
     const { content } = req.body
-
-    const audioNotesDir = path.resolve(__dirname, "../uploads/audio_notes")
-    
-    if (!fs.existsSync(audioNotesDir)) {
-      fs.mkdirSync(audioNotesDir, { recursive: true })
-    }
 
     const userId = req.user._id
     
@@ -1903,65 +1924,28 @@ const addNote = async (req , res , next) => {
       return next(createError("Student is not enrolled in this course", 400))
     }
 
-    let audioUrl = null
-
-    if (req.files && req.files.audioFile) {
-
-      const audioFile = req.files.audioFile
-
-      const allowedTypes = ["audio/mpeg", "audio/wav"]
-      
-      if (!allowedTypes.includes(audioFile.mimetype)) {
-        return next(createError("Invalid file type. Only MP3 and WAV are allowed" , 400))
-      }
-
-      const uniqueName = `${Date.now()}-${audioFile.name}`
-      const uploadPath = path.join(audioNotesDir , uniqueName)
-
-      try {
-
-        await audioFile.mv(uploadPath)
-  
-        const file = new File({
-          originalName: audioFile.name,
-          uniqueName,
-          filePath: `/uploads/audio_notes/${uniqueName}`,
-          fileType: audioFile.mimetype,
-          fileSize: audioFile.size,
-          user: userId, 
-        })
-
-        await file.save()
-  
-        audioUrl = file.filePath
-
-      } catch (error) {
-        return res.status(500).json({ message: "Error uploading the file", error })
-      }
-
-    }
-
-    if (!content && !audioUrl) {
+    if (!content) {
       return next(createError("A note must have either text content or an audio file" , 400))
     }
 
     const course = await Course.findOne({
-      _id: courseId,
-      "sections._id": sectionId,
-      "sections.items._id": itemId,
+      _id: courseId
     })
 
     if (!course) {
       return next(createError("Course, section, or item not found" , 400))
     }
 
-    const item = course.sections.id(sectionId).items.id(itemId)
+    const newNote = {
+      userId ,
+      content
+    }
 
-    item.notes.push({ userId , content , audioUrl })
+    studentDoc.notes.push(newNote)
 
-    await course.save()
+    await studentDoc.save()
 
-    res.status(201).json({ message: "Note added successfully", note: { userId, content, audioUrl } })
+    res.status(201).json({ message: "Note added successfully", note : newNote })
 
   } catch (error) {
     next(error)
@@ -1979,7 +1963,7 @@ const getAllNotesForCourse = async (req, res, next) => {
     const { courseId } = req.params
     
     const page = Number(req.query.page) || 1
-    const limit = 10 
+    const limit = 3
 
     const userId = req.user._id
     
@@ -2005,15 +1989,7 @@ const getAllNotesForCourse = async (req, res, next) => {
       return next(createError("Student is not enrolled in this course", 400))
     }
 
-    const allNotes = course.sections.reduce((acc, section) => {
-
-      section.items.forEach((item) => {
-        acc = acc.concat(item.notes)
-      })
-
-      return acc
-
-    }, [])
+    const allNotes = studentDoc.notes
 
     const totalNotes = allNotes.length
     const startIndex = (page - 1) * limit
@@ -2083,103 +2059,55 @@ const getNotesForItem = async (req, res, next) => {
 
 
 
-
 const updateNote = async (req, res, next) => {
-  
+
   try {
 
-    const { courseId, sectionId, itemId, noteId } = req.params
+    const { courseId, noteId } = req.params
+
     const { content } = req.body
 
-    let audioUrl = null
-
     const userId = req.user._id
-    
+
     const user = await User.findById(userId)
-    
+
     if (!user) {
-      return next(createError("Not Authorized" , 401))
+      return next(createError("Not Authorized", 401))
     }
 
-    const studentDoc = await Student.findOne({userObjRef : userId})
+    const studentDoc = await Student.findOne({ userObjRef: userId })
 
-    if(!studentDoc){
-      return next(createError("Student not exist" , 404))
+    if (!studentDoc) {
+      return next(createError("Student not exist", 404))
     }
 
-    const course = await Course.findOne({
-      _id: courseId,
-      "sections._id": sectionId,
-      "sections.items._id": itemId,
-    })
+    const course = await Course.findById(courseId)
 
     if (!course) {
-      return next(createError("Course, section, or item not found" , 400))
+      return next(createError("Course not found", 400))
     }
 
     if (!course.studentsEnrolled.includes(studentDoc._id)) {
-      return next(createError("Student is not enrolled in this course" , 400))
+      return next(createError("Student is not enrolled in this course", 400))
     }
 
-    const item = course.sections.id(sectionId).items.id(itemId)
-    const note = item.notes.id(noteId)
+    const noteIndex = studentDoc.notes.findIndex((note) => note._id.toString() === noteId)
 
-    console.log(item)
-
-    if (!note) {
+    if (noteIndex === -1) {
       return next(createError("Note not found", 404))
     }
 
-    if (note.userId.toString() !== userId.toString()) {
-      return next(createError("Not authorized to update this note" , 403))
+    if (studentDoc.notes[noteIndex].userId.toString() !== userId.toString()) {
+      return next(createError("Not authorized to update this note", 403))
     }
 
-    if (req.files && req.files.audioFile) {
+    studentDoc.notes[noteIndex].content = content
+    
+    studentDoc.markModified("notes")
 
-      const audioFile = req.files.audioFile
-      const allowedTypes = ["audio/mpeg", "audio/wav"]
+    await studentDoc.save()
 
-      if (!allowedTypes.includes(audioFile.mimetype)) {
-        return next(createError("Invalid file type. Only MP3 and WAV are allowed", 400))
-      }
-
-      const uniqueName = `${Date.now()}-${audioFile.name}`
-      const uploadPath = path.join(__dirname, "../uploads/audio_notes", uniqueName)
-
-      await audioFile.mv(uploadPath);
-      audioUrl = `/uploads/audio_notes/${uniqueName}`
-
-      const newFile = new File({
-        originalName: audioFile.name,
-        uniqueName,
-        filePath: audioUrl,
-        fileType: audioFile.mimetype,
-        fileSize: audioFile.size,
-        user: req.user._id,
-      })
-
-      await newFile.save()
-
-      if (note.audioUrl) {
-
-        const prevFilePath = path.join(__dirname, `..${note.audioUrl}`)
-
-        if (fs.existsSync(prevFilePath)) {
-          fs.unlinkSync(prevFilePath)
-        }
-
-        await File.deleteOne({ filePath: note.audioUrl })
-
-      }
-
-    }
-
-    if (content) note.content = content
-    if (audioUrl) note.audioUrl = audioUrl
-
-    await course.save()
-
-    res.status(200).json({ message: "Note updated successfully", note })
+    res.status(200).json({ message: "Note updated successfully", note: studentDoc.notes[noteIndex] })
 
   } catch (error) {
     next(error)
@@ -2191,75 +2119,47 @@ const updateNote = async (req, res, next) => {
 
 
 const deleteNote = async (req, res, next) => {
-  
+
   try {
 
-    const { courseId, sectionId, itemId, noteId } = req.params;
+    const { courseId, noteId } = req.params
     const userId = req.user._id
 
     const user = await User.findById(userId)
-    
+
     if (!user) {
-      return next(createError("Not Authorized" , 401))
+      return next(createError("Not Authorized", 401))
     }
 
-    const studentDoc = await Student.findOne({userObjRef : userId})
+    const studentDoc = await Student.findOne({ userObjRef: userId })
 
-    if(!studentDoc){
-      return next(createError("Student not exist" , 404))
+    if (!studentDoc) {
+      return next(createError("Student not found", 404))
     }
 
-    const course = await Course.findOne({
-      _id: courseId,
-      "sections._id": sectionId,
-      "sections.items._id": itemId,
-    })
+    const course = await Course.findById(courseId)
 
     if (!course) {
-      return next(createError("Course, section, or item not found", 404))
+      return next(createError("Course not found", 404))
     }
 
     if (!course.studentsEnrolled.includes(studentDoc._id)) {
-      return next(createError("Student is not enrolled in this course" , 400))
+      return next(createError("Student is not enrolled in this course", 400))
     }
 
-    const section = course.sections.id(sectionId)
+    const noteIndex = studentDoc.notes.findIndex((note) => note._id.toString() === noteId)
 
-    if (!section) {
-      return next(createError("Section not found", 404))
-    }
-
-    const item = section.items.id(itemId);
-
-    if (!item) {
-      return next(createError("Item not found", 404))
-    }
-
-    const note = item.notes.id(noteId)
-
-    if (!note) {
+    if (noteIndex === -1) {
       return next(createError("Note not found", 404))
     }
 
-    if (note.userId.toString() !== userId.toString()) {
+    if (studentDoc.notes[noteIndex].userId.toString() !== userId.toString()) {
       return next(createError("Not authorized to delete this note", 403))
     }
 
-    if (note.audioUrl) {
+    studentDoc.notes.splice(noteIndex, 1)
 
-      const audioFilePath = path.join(__dirname, `..${note.audioUrl}`)
-
-      if (fs.existsSync(audioFilePath)) {
-        fs.unlinkSync(audioFilePath)
-      }
-
-      await File.deleteOne({ filePath : note.audioUrl })
-
-    }
-
-    item.notes.pull({ _id : noteId })
-
-    await course.save()
+    await studentDoc.save()
 
     res.status(200).json({ message: "Note deleted successfully" })
 

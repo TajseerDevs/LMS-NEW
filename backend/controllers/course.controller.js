@@ -132,10 +132,13 @@ const getCourseById = async (req, res, next) => {
     }
 
     const course = await Course.findById(courseId)
-      .select(
-        "-studentsEnrolled -paymentCourses -sections.items.attachments.file_path"
-      )
-      .populate("instructorId");
+    .select("-paymentCourses -sections.items.attachments.file_path")
+    .populate({
+      path: "instructorId",
+      populate: {
+        path: "userObjRef",
+      },
+    })
 
     if (!course) {
       return next(createError("Course not found", 404));

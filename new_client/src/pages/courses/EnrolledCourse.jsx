@@ -18,7 +18,7 @@ import { IoIosArrowDown , IoIosArrowForward  } from "react-icons/io";
 import { MdEdit , MdDeleteForever  } from "react-icons/md";
 import DeleteNoteModal from '../../components/DeleteNoteModal'
 import {axiosObj} from "../../utils/axios"
-import {useGetCourseCompletionPercentageQuery , useCheckFeedbackStatusQuery, useSetCourseLastProgressMutation, useGetCourseLastProgressQuery} from "../../store/apis/studentApis"
+import {useGetCourseCompletionPercentageQuery , useCheckFeedbackStatusQuery, useSetCourseLastProgressMutation, useGetCourseLastProgressQuery, useGetAllRemindersQuery, useDeleteReminderMutation, useAddNoteMutation, useGetAllNotesForCourseQuery, useUpdateNoteMutation, useDeleteNoteMutation} from "../../store/apis/studentApis"
 import { useIncrementAttachmentViewMutation , useIncrementSectionViewMutation } from '../../store/apis/courseApis'
 import { useGetCourseLastestQuizzesQuery } from '../../store/apis/quizApis'
 import { formatTimeWithLabels } from '../../utils/formatTime'
@@ -38,6 +38,8 @@ import CourseReminderModal from '../../components/CourseReminderModal'
 import { formatQuizDuration } from '../../utils/formatQuizDuration'
 import formatDate from '../../utils/formatDate'
 import { useGetCourseLatestAssignmentsQuery } from '../../store/apis/assigmentApis'
+import DeleteReminderModal from '../../components/DeleteReminderModal'
+import { toast } from 'react-toastify'
 
 // ! add a check that runs directly when any user enter this page to check if he enrolled in this course or not if not navigate him to single course page (not enrolled student)
 
@@ -90,17 +92,22 @@ const EnrolledCourse = () => {
     const [isExpanded , setIsExpanded] = useState()
     const [activeSectionIndex , setactiveSectionIndex] = useState()
 
-    const [hasProvidedFeedback, setHasProvidedFeedback] = useState(false);
+    const [hasProvidedFeedback, setHasProvidedFeedback] = useState(false)
 
-    const [hasRated, setHasRated] = useState(false);
-    const [hasFeedback, setHasFeedback] = useState(false);
+    const [hasRated, setHasRated] = useState(false)
+    const [hasFeedback, setHasFeedback] = useState(false)
 
     const [ratingType, setRatingType] = useState("")
     const [sortBy, setsortBy] = useState("")
     const [reminderFilter, setReminderFilter] = useState("")
+    const [editingReminder, setEditingReminder] = useState(null)
+    const [isDeleteRminderModalOpen, setIsDeleteRminderModalOpen] = useState(false)
+    const [reminderToDelete, setReminderToDelete] = useState(null)
 
     const [quizTabPage , setQuizTabPage] = useState(1)
     const [assignmentTabPage , setAssignmentTabPage] = useState(1)
+    const [reminderTabPage , setReminderTabPage] = useState(1)
+    const [notesTabPage , setNotesTabPage] = useState(1)
 
 
 
@@ -131,11 +138,17 @@ const EnrolledCourse = () => {
     const [incrementSectionView] = useIncrementSectionViewMutation()
     const [incrementAttachmentView] = useIncrementAttachmentViewMutation()
     const [setCourseLastProgress] = useSetCourseLastProgressMutation()
+    const [deleteReminder] = useDeleteReminderMutation()
+    const [addNote] = useAddNoteMutation()
+    const [updateNote] = useUpdateNoteMutation()
+    const [deleteNote] = useDeleteNoteMutation()
 
 
     const {data : courseLastQuizzes , isLoading : isLoadingLastQuizzes} = useGetCourseLastestQuizzesQuery({token , page : quizTabPage , courseId} , {skip : selectedTab !== "Quiz"})
     const {data : courseLastAssignments} = useGetCourseLatestAssignmentsQuery({token , page : assignmentTabPage , courseId} , {skip : selectedTab !== "Assignment"})
     const {data : courseLastProgress} = useGetCourseLastProgressQuery({token , courseId})
+    const {data : courseReminders , refetch : refetchCourseReminders} = useGetAllRemindersQuery({token , courseId , page : reminderTabPage} , {skip : selectedTab !== "Reminder"})
+    const {data : courseNotes , refetch : refetchCourseNotes} = useGetAllNotesForCourseQuery({token , courseId , page : notesTabPage} , {skip : selectedTab !== "Notes"})
 
 
 
@@ -264,7 +277,6 @@ const EnrolledCourse = () => {
         }
     
     }
-
 
 
 
@@ -472,22 +484,24 @@ const EnrolledCourse = () => {
 
     const handleEditClick = (note) => {
 
-        if (!expandedNotes[note.id]) {
-          toggleExpansion(note.id)
+        if (!expandedNotes[note?._id]) {
+          toggleExpansion(note?._id)
         }
 
-        setEditingNoteId(note.id)
-        setEditedContent(note.content)
+        setEditingNoteId(note?._id)
+        setEditedContent(note?.content)
 
     }
     
 
-    const handleSaveClick = () => {
-        
-        setNotes((prevNotes) => prevNotes.map((note) => note.id === editingNoteId ? { ...note , content: editedContent } : note))
-
-        setEditingNoteId(null)
-
+    const handleSaveClick = async () => {
+        try {
+            await updateNote({token , courseId , content: editedContent , noteId : editingNoteId }).unwrap()
+            await refetchCourseNotes()
+            setEditingNoteId(null)
+        } catch (error) {
+            toast.error("Error updating note")
+        }
     }
 
 
@@ -512,6 +526,56 @@ const EnrolledCourse = () => {
             : [...prevSections, sectionId]
         )
     }
+
+
+    const handleEditReminder = (reminder) => {
+        setEditingReminder(reminder)
+        setIsCourseReminderModalOpen(true)
+    }
+
+
+    const handleDeleteReminderClick = (reminderId) => {
+        setReminderToDelete(reminderId)
+        setIsDeleteRminderModalOpen(true)
+    }
+
+    
+    const handleModalClose = () => {
+        setIsDeleteRminderModalOpen(false)
+    }
+
+
+    const handleDeleteConfirmation = async () => {
+        try {
+          await deleteReminder({ token, reminderId: reminderToDelete }).unwrap()
+          await refetchCourseReminders()
+          setIsDeleteRminderModalOpen(false)
+          toast.success('Reminder deleted successfully!')
+        } catch (error) {
+          toast.error('Error deleting reminder')
+        }
+    }
+
+
+
+    const addNewNote = async () => {
+
+        if(noteText.length === 0){
+            return toast.error("Note text can't be empty") 
+        }
+
+        try {
+            await addNote({token , courseId , content : noteText}).unwrap()
+            await refetchCourseNotes()
+            toast.info("new note has been added")
+            setNoteText("")
+        } catch (error) {
+            toast.error('Error Adding new note')
+        }
+    }
+
+
+    
 
 
     const getItemIcon = (type) => {
@@ -564,54 +628,6 @@ const EnrolledCourse = () => {
 
 
 
-
-    const assignments = [
-        {  
-          id : 1 ,
-          title: "Science Intro",
-          date: "February 23, 2023 12:45 pm",
-          grade: "5 Marks",
-        },
-        {
-          id : 2 ,
-          title: "Science Intro",
-          date: "February 23, 2023 12:45 pm",
-          grade: "10 Marks",
-        },
-        {
-          id : 3 ,
-          title: "Science Intro",
-          date: "February 23, 2023 12:45 pm",
-          grade: "15 Marks",
-        },
-    ]
-
-
-    const reminders = [
-        {
-            id: 1,
-            title: "Stay on top of your studies with a daily reminder to keep you on track!",
-            time: "11:30 AM",
-            type: "daily",
-        },
-        {
-            id: 2,
-            title: "Plan ahead and receive a weekly reminder to manage your progress effectively",
-            time: "11:30 AM",
-            type: "weekly",
-            days: ["Sunday", "Tuesday", "Thursday"],
-        },
-        {
-            id: 3,
-            title: "Set a one-time reminder for important deadlines or events.",
-            time: "11:30 AM",
-            type: "one-time",
-            date: "February 27, 2025",
-        },
-    ]
-
-
-
     const getColor = (type) => {
         switch (type) {
           case "daily":
@@ -630,6 +646,7 @@ const EnrolledCourse = () => {
     if (!course) {
         return <div>Loading course data...</div>
     }
+
 
 
 
@@ -805,7 +822,7 @@ const EnrolledCourse = () => {
 
                             <div className='absolute -bottom-5 right-6 flex gap-4'>
                                 <button onClick={() => setNoteText("")} className='mt-8 bg-[#FFF] text-[#403685] border-2 border-[#403685] text-[16px] font-bold px-8 py-3 rounded-lg disabled:cursor-not-allowed capitalize'>cancel</button>
-                                <button disabled={isQuillEmpty(noteText)} className='mt-8 bg-[#FFC200] text-[#002147] text-[14px] font-semibold px-8 py-3 rounded-lg disabled:cursor-not-allowed disabled:bg-gray-200 capitalize'>add note</button>
+                                <button onClick={addNewNote} disabled={isQuillEmpty(noteText)} className='mt-8 bg-[#FFC200] text-[#002147] text-[14px] font-semibold px-8 py-3 rounded-lg disabled:cursor-not-allowed disabled:bg-gray-200 capitalize'>add note</button>
                             </div>
 
                         </div>
@@ -816,37 +833,40 @@ const EnrolledCourse = () => {
 
                         <div className='flex w-[90%] gap-8 flex-col'>
 
-                            {notes.map((note) => (
+                            {courseNotes?.notes?.map((note) => (
 
-                                <div key={note.id}>
+                                <div key={note?._id}>
 
                                     <div className="flex bg-white rounded-md border-b-2 p-3 pt-4 w-full justify-between">
 
-                                        <div className="flex cursor-pointer items-center gap-4" onClick={() => toggleExpansion(note.id)} >
+                                        <div className="flex cursor-pointer items-center gap-4" onClick={() => toggleExpansion(note?._id)} >
 
                                             <IoIosArrowDown size={26}
                                                 style={{
-                                                    transform: expandedNotes[note.id] ? 'rotate(180deg)' : 'rotate(0deg)',
+                                                    transform: expandedNotes[note?._id] ? 'rotate(180deg)' : 'rotate(0deg)',
                                                     transition: 'transform 0.3s ease',
                                                 }}
                                             />
 
-                                            <span className="font-semibold text-xl text-[#92929D]">{note.title}</span>
+                                            <span
+                                                className="font-semibold text-xl text-[#92929D]"
+                                                dangerouslySetInnerHTML={{ __html: note?.content }}
+                                            />
 
                                         </div>
 
                                         <div className="flex cursor-pointer items-center gap-4">
                                             <MdEdit onClick={() => handleEditClick(note)} className="text-[#6555BC]" size={28} />
-                                            <MdDeleteForever onClick={() => openDeleteModal(note.id)} className="text-[#FC5A5A]" size={28} />
+                                            <MdDeleteForever onClick={() => openDeleteModal(note?._id)} className="text-[#FC5A5A]" size={28} />
                                         </div>
 
                                     </div>
 
-                                    {expandedNotes[note.id] && (
+                                    {expandedNotes[note?._id] && (
 
                                         <div className="bg-white p-8">
 
-                                            {editingNoteId === note.id ? (
+                                            {editingNoteId === note?._id ? (
 
                                                 <div className='p-4 flex flex-col gap-5'>
 
@@ -871,7 +891,10 @@ const EnrolledCourse = () => {
                                                 </div>
 
                                             ) : (
-                                                <p className="text-[#000] font-semibold">{note.content}</p>
+                                                <p 
+                                                    className="text-[#000] font-semibold"
+                                                    dangerouslySetInnerHTML={{ __html: note?.content }}
+                                                />
                                             )}
 
                                         </div>
@@ -1144,26 +1167,30 @@ const EnrolledCourse = () => {
 
                     <h3 className='text-[#002147] font-semibold text-[30px]'>Course Reminders</h3>
 
-                    {reminders.length > 0 && <div className='flex items-center gap-5 justify-end'>
+                    {
 
-                        <select value={reminderFilter} onChange={(e) => setReminderFilter(e.target.value)} name="sort" className="border px-3 w-[250px] py-2 rounded-lg">
-                    
-                            <option value="" selected disabled>Sort By Type</option>
+                        courseReminders?.reminders?.length > 0 && <div className='flex items-center gap-5 justify-end'>
 
-                            <option value="Daily" selected disabled>Daily</option>
-                            <option value="Weekly" selected disabled>Weekly</option>
-                            <option value="Once" selected disabled>Once</option>
+                            <select value={reminderFilter} onChange={(e) => setReminderFilter(e.target.value)} name="sort" className="border px-3 w-[250px] py-2 rounded-lg">
+                        
+                                <option value="" selected disabled>Sort By Type</option>
 
-                        </select>
+                                <option value="Daily">Daily</option>
+                                <option value="Weekly">Weekly</option>
+                                <option value="Once">Once</option>
 
-                        <YellowBtn onClick={() => setIsCourseReminderModalOpen(true)} text={"Add course reminder"} icon={FaPlus} />
+                            </select>
 
-                    </div>}
+                            <YellowBtn onClick={() => setIsCourseReminderModalOpen(true)} text={"Add course reminder"} icon={FaPlus} />
+
+                        </div>
+
+                    }
 
                 </div>
 
                 {
-                    reminders.length === 0 && <div className="flex flex-col items-center justify-center p-6">
+                    courseReminders?.reminders?.length === 0 && <div className="flex flex-col items-center justify-center p-6">
 
                     <div className="p-6 rounded-lg text-center max-w-md">
 
@@ -1189,22 +1216,19 @@ const EnrolledCourse = () => {
                 }
 
                 {
-                    reminders.length > 0 && (
+                    courseReminders?.reminders?.length > 0 && (
 
                         <div className="max-w-[80%] space-y-6 p-4 rounded-lg">
 
-                            {reminders.map((reminder) => (
+                            {courseReminders?.reminders?.map((reminder) => (
 
-                                <div
-                                    key={reminder.id}
-                                    className="flex items-start p-4 bg-white rounded-lg shadow-md relative"
-                                >
+                                <div key={reminder?._id} className="flex items-start p-4 bg-white rounded-lg shadow-md relative">
 
-                                <div className={`${getColor(reminder.type)} w-2 h-full absolute left-0 top-0 rounded-l-lg`} />
+                                <div className={`${getColor(reminder?.reminderType)} w-2 h-full absolute left-0 top-0 rounded-l-lg`} />
 
                                     <div className="ml-4 flex-1">
 
-                                        <p className="text-gray-700 font-medium">{reminder.title}</p>
+                                        <p className="text-gray-700 capitalize font-medium">{reminder?.reminderName}</p>
 
                                         <div className="flex items-center text-gray-500 mt-2">
 
@@ -1212,16 +1236,13 @@ const EnrolledCourse = () => {
                                             <FaClock className='text-[#6555BC]'/>
                                         </span>
 
-                                        <span>{reminder.time}</span>
+                                        <span>{reminder?.reminderTime}</span>
 
-                                        {reminder.type === "weekly" && (
+                                        {reminder?.reminderType === "weekly" && (
 
                                             <div className="ml-5 flex space-x-2">
-                                                {reminder.days.map((day) => (
-                                                    <span
-                                                        key={day}
-                                                        className="px-2 py-1 bg-gray-200 rounded-lg text-sm text-gray-700"
-                                                    >
+                                                {reminder?.reminderDays?.map((day) => (
+                                                    <span key={day} className="px-2 py-1 bg-gray-200 rounded-lg text-sm text-gray-700">
                                                         {day}
                                                     </span>
                                                 ))}
@@ -1230,9 +1251,9 @@ const EnrolledCourse = () => {
 
                                         )}
 
-                                        {reminder.type === "one-time" && (
+                                        {reminder?.reminderType === "once" && (
                                             <span className="ml-4 flex items-center">
-                                                <FaCalendarAlt className='text-[#6555BC]0'/> <span className="ml-1">{reminder.date}</span>
+                                                <FaCalendarAlt className='text-[#6555BC]0'/> <span className="ml-1">{formatDate(reminder?.reminderDateTime)}</span>
                                             </span>
                                         )}
 
@@ -1241,13 +1262,25 @@ const EnrolledCourse = () => {
                                     </div>
                                     
                                     <div className='flex items-center gap-3'>
-                                        <button className="ml-2"><MdModeEdit className='text-[#6555BC]' size={22}/></button>
-                                        <button className="ml-2"><MdDelete className='text-red-500' size={22}/></button>
+                                        <button onClick={() => handleEditReminder(reminder)} className="ml-2"><MdModeEdit className='text-[#6555BC]' size={22}/></button>
+                                        <button  onClick={() => handleDeleteReminderClick(reminder?._id)} className="ml-2"><MdDelete className='text-red-500' size={22}/></button>
                                     </div>
 
                                 </div>
 
                             ))}
+
+                            {courseReminders?.reminders?.length !== 0 && !isLoadingLastQuizzes && <div className='flex items-center justify-end gap-6 p-3 w-[100%]'>
+
+                                <YellowBtn onClick={() => setReminderTabPage((prev) => Math.max(prev - 1, 1))} text="Previous" disabled={reminderTabPage === 1}  />
+
+                                <span className="font-semibold">
+                                    Page {courseReminders?.page} of {courseReminders?.totalPages || 1}
+                                </span>
+                                
+                                <YellowBtn onClick={() => setReminderTabPage((prev) => Math.min(prev + 1, courseReminders?.totalPages))} text="Next" disabled={reminderTabPage === courseReminders?.totalPages}  />
+
+                            </div>}
 
                         </div>
                     ) 
@@ -1273,7 +1306,7 @@ const EnrolledCourse = () => {
 
         return (
 
-            <div key={section?._id} className='bg-white border-b w-full border-gray-300 p-4'>
+            <div key={section?._id} className='bg-white last:border-b w-full border-gray-300 p-4'>
 
                 <div key={section?._id} onClick={() => {toggleSection(section?._id) ; handleSectionSelect(section)}} className='flex justify-between cursor-pointer items-center'>
 
@@ -1310,7 +1343,7 @@ const EnrolledCourse = () => {
                                     className="flex cursor-pointer justify-between items-center w-full mt-4"
                                     onClick={async () => {
                                         try {
-                                            setSelectedItem(item); 
+                                            setSelectedItem(item);  
                                             selectAttachment(sectionIndex, itemIndex)
                                             const attachmentId = item?.attachments[0]?._id;
                                             await handleAttachmentClick(attachmentId, item)
@@ -1353,8 +1386,9 @@ const EnrolledCourse = () => {
 
         {isCourseRateModalOpen && <CourseRatePopUp onClose={() => setIsCourseRateModalOpen(false)} />}
         {isFeedbackReportModalOpen && <ReportFeedbackPopUp onClose={() => setIsFeedbackReportModalOpen(false)} />}
-        {isCourseReminderModalOpen && <CourseReminderModal onClose={() => setIsCourseReminderModalOpen(false)} />}
-
+        {isCourseReminderModalOpen && <CourseReminderModal editingReminder={editingReminder} refetch={refetchCourseReminders} courseId={courseId} onClose={() => {setIsCourseReminderModalOpen(false) ; setEditingReminder(null)}} />}
+        {isDeleteRminderModalOpen && <DeleteReminderModal isOpen={isDeleteRminderModalOpen} onClose={handleModalClose} onDelete={handleDeleteConfirmation}/>}
+    
     </div>
 
     )

@@ -36,8 +36,8 @@ const CourseCard = ({ data , refetchStudentNotEnrolledCourses , refetchEnrolledC
 
   useEffect(() => {
     if (cartData) {
-        setCartItems(data.cartItems || [])
-      }
+      setCartItems(data.cartItems || [])
+    }
   }, [cartData])
 
   
@@ -47,10 +47,12 @@ const CourseCard = ({ data , refetchStudentNotEnrolledCourses , refetchEnrolledC
 
 
   useEffect(() => {
-    setIsCourseInCart(cartItems?.cartItems?.some((cartItem) => (cartItem?._id || cartItem?.course?._id?.toString()) === data?._id))
-  }, [cartItems, data?._id])
+    setIsCourseInCart(cartData?.cartItems?.some((cartItem) => (cartItem?._id || cartItem?.course?._id?.toString()) === data?._id))
+  }, [cartData, data?._id , dispatch])
 
   console.log(cartItems)
+  console.log(cartData)
+
 
   const handleAddToCart = async (course) => {
     
@@ -60,7 +62,7 @@ const CourseCard = ({ data , refetchStudentNotEnrolledCourses , refetchEnrolledC
         return toast.error("Please log in to add courses to the cart")
       }
       
-      const isCourseExist = cartItems?.cartItems?.find((cartItem) => cartItem?._id === data?._id)
+      const isCourseExist = cartData?.cartItems?.find((cartItem) => cartItem?._id === data?._id)
 
       if (isCourseExist) {
         return toast.error("This course is already in your cart")
@@ -80,6 +82,7 @@ const CourseCard = ({ data , refetchStudentNotEnrolledCourses , refetchEnrolledC
 
   }
   
+
   
   const handleRemoveFromCart = async (course) => {
 
@@ -89,7 +92,7 @@ const CourseCard = ({ data , refetchStudentNotEnrolledCourses , refetchEnrolledC
         return toast.error("Please log in to add courses to the cart")
       }
 
-      const isCourseExist = cartItems?.cartItems?.find((cartItem) => (cartItem?._id || cartItem?.course?._id?.toString()) === data?._id)
+      const isCourseExist = cartData?.cartItems?.find((cartItem) => (cartItem?._id || cartItem?.course?._id?.toString()) === data?._id)
 
       if (!isCourseExist) {
         return toast.error("This course is not in your cart")

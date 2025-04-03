@@ -17,23 +17,150 @@ import { FaPlayCircle, FaFileAlt, FaImage, FaTasks , FaRegStar , FaVideo  } from
 import { VscPreview } from "react-icons/vsc"
 import { MdPeople } from "react-icons/md"
 import reviews from '../../data/reviews';
-
+import { useGetCourseByIdQuery } from '../../store/apis/courseApis';
+import { useDispatch, useSelector } from 'react-redux';
+import getTotalTime from '../../utils/getTotalTime';
+import { formatTimeWithLabels } from '../../utils/formatTime';
+import YellowBtn from "../../components/YellowBtn"
+import { useAddToCartMutation, useCalculateCartTotalQuery, useGetCartItemsQuery, useRemoveAllCourseItemsMutation } from '../../store/apis/cartApis';
+import { useEnrollFreeCourseMutation } from '../../store/apis/studentApis';
+import { toast } from "react-toastify";
+import { addToCart, removeFromCart } from '../../store/slices/cartSlice';
+import ConfirmationPopup from '../../components/ConfirmationPopup';
 
 
 
 const SingleCourse = () => {
 
+  const baseUrl = "http://10.10.30.40:5500"
+
   const params = useParams()
+  
+  const {user , token} = useSelector((state) => state.user)
+  
   const navigate = useNavigate()
+  const dispatch = useDispatch()
+  
+  const [isCourseInCart, setIsCourseInCart] = useState(false)
   const [isWishlist , setIsWishlist] = useState(false)
   const [expandedSections , setExpandedSections] = useState([])
-
+  const [cartItems, setCartItems] = useState([])
+  const [showPopup, setShowPopup] = useState(false)
+  
+  const { data : cartData , isLoading, error , refetch : refetchCartItems} = useGetCartItemsQuery({token})
+  const { refetch } = useCalculateCartTotalQuery({ token })
+  
+  const {data : course} = useGetCourseByIdQuery({token , courseId : params.courseId})
+  
+  const [addToCartFun] = useAddToCartMutation()
+  const [removeCourseItemsFun] = useRemoveAllCourseItemsMutation()
+  const [enrollFreeCourse] = useEnrollFreeCourseMutation()
+  
+  
   useEffect(() => {
     window.scrollTo(0 , 0)
   }, [])
-    
+
+
+  useEffect(() => {
+    setIsCourseInCart(cartData?.cartItems?.some((cartItem) => (cartItem?._id || cartItem?.course?._id?.toString()) === course?._id))
+  }, [cartData, course])
   
-  console.log(sections)
+  
+
+  const handleAddToCart = async (course) => {
+
+    try {
+      
+      if (!user) {
+        return toast.error("Please log in to add courses to the cart")
+      }
+
+      const isCourseExist = cartData?.cartItems?.find((cartItem) => cartItem?._id === course?._id)
+
+      if (isCourseExist) {
+        return toast.error("This course is already in your cart")
+      }
+
+      const res = await addToCartFun({ token , courseId: course?._id })
+
+      await refetchCartItems()
+      await refetch()
+      
+      dispatch(addToCart({ course }))
+      dispatch(setCartItems({ cartItems: res.data}))
+
+    } catch (error) {
+      const errorMessage = error?.response?.data?.msg
+      toast.error(errorMessage)
+    }
+
+  }
+
+
+
+
+
+  const handleRemoveFromCart = async (course) => {
+    
+    try {
+      
+      if (!user) {
+        return toast.error("Please log in to add courses to the cart")
+      }
+      
+      const isCourseExist = cartData?.cartItems?.find((cartItem) => (cartItem?._id || cartItem?.course?._id?.toString()) === course?._id)
+      
+      if (!isCourseExist) {
+        return toast.error("This course is not in your cart")
+      }
+
+      dispatch(removeFromCart({ courseId: course._id }))
+
+      const res = await removeCourseItemsFun({ token, courseId: course?._id })
+
+      await refetchCartItems()
+      await refetch()
+      
+      dispatch(setCartItems({ cartItems: res.data }))
+      
+    } catch (error) {
+      const errorMessage = error?.response?.data?.msg
+      toast.error(errorMessage)
+    }
+  
+  }
+
+
+
+  const handleCancel = async (e) => {
+    e.stopPropagation()
+    setShowPopup(false)
+  }
+
+
+  const handleEnroll = async (e) => {
+
+    try {
+      e.stopPropagation()
+      await enrollFreeCourse({token , courseId : course?._id})
+      refetchStudentNotEnrolledCourses()
+      refetchEnrolledCourses()
+      navigate("/enrolled-courses")
+    } catch (error) {
+      console.log(error)
+    }
+
+    setShowPopup(false)
+
+  }
+
+
+  
+
+  console.log(cartData)
+
+
 
   const toggleSection = (sectionId) => {
     setExpandedSections((prevSections) =>
@@ -60,10 +187,16 @@ const SingleCourse = () => {
   }
 
 
+  const parser = new DOMParser();
+  const parsedHtml = parser.parseFromString(course?.extraInfo || "", "text/html");
+  const listItems = Array.from(parsedHtml.querySelectorAll("li")).map((li) => li.textContent.trim());
+
+
+
 
   return (
 
-    <div className="overflow-y-auto min-h-screen">
+    <div className="overflow-y-auto p-6 min-h-screen">
 
       <div className='flex gap-4 ml-2 mb-2 cursor-pointer'>
 
@@ -80,7 +213,7 @@ const SingleCourse = () => {
         </div>
 
         <div className='flex gap-3 items-center justify-center'>
-          <span className='text-lg mb-1 font-semibold text-[#FFC200]'>Introduction Basic Programming HTML & CSS</span>
+          <span className='text-lg mb-1 capitalize font-semibold text-[#FFC200]'>{course?.title}</span>
         </div>
 
       </div>
@@ -93,24 +226,28 @@ const SingleCourse = () => {
           <div>
 
             <div className='flex items-center mb-3 gap-4'>
-              <img className='rounded-full' src={testImg} alt="" />
-              <span className='rounded-full text-xl'>instructor name</span>
+              <img className='rounded-full' src={course?.course?.instructorId?.userObjRef?.profilePic ? `${baseUrl}${course.course.instructorId.userObjRef.profilePic}` : testImg} alt="" />
+              <span className='rounded-full capitalize text-xl'>{course?.instructorId?.userObjRef?.firstName} {course?.instructorId?.userObjRef?.lastName}</span>
             </div>
             
-            <h1 className="text-3xl font-bold">Introduction Basic Programming HTML & CSS</h1>
+            <h1 className="text-3xl ml-1 capitalize font-bold">{course?.title}</h1>
 
-            <p className="text-xl mt-3">
-              This course provides a foundational understanding of web development using HTML <br /> (HyperText Markup Language) and CSS (Cascading Style Sheets)
+            <p className="text-xl capitalize ml-1 mt-3">
+              {course?.description}
             </p>
 
           </div>
 
           <div className="mt-16 mr-12 flex space-x-6">
 
-            <button className="bg-yellow-400 w-40 h-[50px] px-4 py-1.5 rounded-lg text-black font-semibold shadow-md text-[16px]">Enroll Course</button>
+            {course?.isPaid ? (
+              isCourseInCart ? <YellowBtn onClick={(e) => {e.stopPropagation() ; handleRemoveFromCart(course)}} text="Remove from cart" /> : <YellowBtn onClick={(e) => {e.stopPropagation() ; handleAddToCart(course)}} text="Add to cart" />
+            ) : (
+              <YellowBtn text="Enroll now" />
+            )}
 
             <button
-              className={`px-3 py-1 w-42 h-[50px] rounded-lg font-semibold shadow-md flex items-center gap-1 text-[16px] text-white`}
+              className={`px-4 py-2 w-42 h-[58px] rounded-lg font-semibold shadow-md flex items-center gap-1 text-[16px] text-white`}
               onClick={() => setIsWishlist(!isWishlist)}
               style={{background: "radial-gradient(222.86% 355.83% at 0.9% 2.98%, rgba(255, 255, 255, 0.40) 0%, rgba(255, 255, 255, 0.18) 84.54%, rgba(255, 255, 255, 0.00) 100%)"}}
             >
@@ -126,19 +263,19 @@ const SingleCourse = () => {
         <div className="absolute -bottom-12 left-0 w-full flex justify-center gap-8 p-6">
 
           <div className="bg-white text-indigo-900 px-8 py-5 rounded-lg flex items-center gap-2 shadow-md">
-            <HiDocumentText className="text-xl" /> <span className='font-semibold'>5 Modules</span>
+            <HiDocumentText className="text-xl" /> <span className='font-semibold'>{course?.sections?.length} Modules</span>
           </div>
 
           <div className="bg-white text-indigo-900 px-8 py-5 rounded-lg flex items-center gap-2 shadow-md">
-            <MdOutlineWatchLater className="text-xl" /> <span className='font-semibold'>50 Min</span>
+            <MdOutlineWatchLater className="text-xl" /> <span className='font-semibold'>{course?.duration} Hours</span>
           </div>
 
           <div className="bg-white text-indigo-900 px-8 py-5 rounded-lg flex items-center gap-2 shadow-md">
-            <FaStar className="text-yellow-400 text-xl" /> <span className='font-semibold'>4.5 (202 reviews)</span>
+            <FaStar className="text-yellow-400 text-xl" /> <span className='font-semibold'>{course?.rate} ({course?.feedbacks?.length} reviews)</span>
           </div>
 
           <div className="bg-white text-indigo-900 px-8 py-5 rounded-lg flex items-center gap-2 shadow-md">
-            <BsFillPeopleFill className="text-xl" /> <span className='font-semibold'>123,340 already enrolled</span>
+            <BsFillPeopleFill className="text-xl" /> <span className='font-semibold'>({course?.studentsEnrolled?.length}) already enrolled</span>
           </div>
 
         </div>
@@ -147,7 +284,7 @@ const SingleCourse = () => {
 
       <div className='p-12 mt-2'>
 
-        <div className='flex gap-8 text-[#656F79] text-xl'>
+        <div className='flex font-semibold gap-8 text-[#656F79] text-xl'>
           <span>About</span>
           <span>Module</span>
           <span>Instructor</span>
@@ -161,38 +298,20 @@ const SingleCourse = () => {
 
         <h3 className='text-[#002147] font-semibold text-[28px]'>Course Description</h3>
 
-        <p className='mt-5 max-w-[1000px] text-[18px]'>
-          This beginner-friendly course introduces the fundamental concepts of HTML (HyperText Markup Language) and CSS (Cascading Style Sheets), the building blocks of web development. Participants will learn how to create structured web pages using HTML and style them effectively with CSS to enhance their appearance and responsiveness.
-          Through hands-on exercises and real-world examples, learners will gain the skills to develop simple web pages, apply styling principles, and create visually appealing, responsive designs. By the end of the course, students will be able to build their own basic websites and have a solid foundation to advance in web development.
-          Key Learning Outcomes:
+        <p className='mt-5 capitalize max-w-[1000px] text-[22px]'>
+         {course?.description}
         </p>
 
         <div className='flex flex-col gap-5 mt-10'>
 
-          <div className='flex gap-2 font-mediumBold'>
-            <img src={correctIcon} alt="" />
-            <span>Understand the role of HTML & CSS in web development.</span>
-          </div>
-
-          <div className='flex gap-2 font-mediumBold'>
-            <img src={correctIcon} alt="" />
-            <span>Learn how to structure web pages using HTML elements.</span>
-          </div>
-
-          <div className='flex gap-2 font-mediumBold'>
-            <img src={correctIcon} alt="" />
-            <span>Apply CSS to style and format web pages.</span>
-          </div>
-
-          <div className='flex gap-2 font-mediumBold'>
-            <img src={correctIcon} alt="" />
-            <span>Implement layout techniques using Flexbox and CSS Grid.</span>
-          </div>
-
-          <div className='flex gap-2 font-mediumBold'>
-            <img src={correctIcon} alt="" />
-            <span>Develop a responsive web page that adapts to different devices.</span>
-          </div>
+          {listItems.map((item, index) =>
+            item ? (
+              <div key={index} className="flex gap-2 font-mediumBold">
+                <img src={correctIcon} alt="Correct Icon" />
+                <span className='capitalize'>{item}</span>
+              </div>
+            ) : null
+          )}
 
         </div>
 
@@ -204,7 +323,7 @@ const SingleCourse = () => {
 
         <div className='mt-4 bg-white flex flex-col items-start max-w-[900px] gap-2'>
 
-          {sections?.map((section, index) => (
+          {course?.sections?.map((section, index) => (
 
             <div key={section._id} className='bg-white border-b w-full border-gray-300 p-4'>
               
@@ -212,7 +331,7 @@ const SingleCourse = () => {
 
                 <div className='flex cursor-pointer flex-col gap-2'>
                 
-                  <span className='font-semibold text-[18px]' onClick={async () => {
+                  <span className='font-semibold capitalize text-[18px]' onClick={async () => {
                     try {
                       toggleSection(section._id)
                     } catch (error) {
@@ -223,7 +342,7 @@ const SingleCourse = () => {
                   </span>
 
                   <div className="section-info text-[16px] text-gray-600">
-                    45 minutes to complete - {section.items?.length} Lessons
+                    {formatTimeWithLabels(getTotalTime(section?.items || []))} - {section.items?.length} Lessons
                   </div>
 
                 </div>
@@ -238,14 +357,14 @@ const SingleCourse = () => {
 
                   {section?.items?.map((item , itemIndex) => (
                     
-                    <div key={item._id} className='flex cursor-pointer justify-between items-center w-full mt-4 mb-4'>
+                    <div key={item._id} className='flex cursor-pointer justify-between items-center w-full mt-8 mb-4'>
 
                       <div className='flex items-center gap-4'>
                         {getItemIcon(item.type)}
                         <span className='font-semibold text-[16px]'>{item.name}</span>
                       </div>
 
-                      <span className='ml-auto text-[16px] font-semibold mr-2 text-gray-600'>{item.duration} min</span>
+                      <span className='ml-auto text-[16px] font-semibold mr-2 text-gray-600'>{formatTimeWithLabels(item?.estimatedTime)}</span>
                       
                     </div>
 
@@ -270,15 +389,16 @@ const SingleCourse = () => {
         <div className='flex gap-8 flex-grow'>
 
           <div>
-            <img className='w-[140px] h-[140px] rounded-full object-contain' src={testImg} alt="" />
+            <img className='w-[140px] h-[140px] rounded-full object-contain' src={course?.course?.instructorId?.userObjRef?.profilePic ? `${baseUrl}${course.course.instructorId.userObjRef.profilePic}` : testImg} alt="" />
           </div>
 
           <div className='flex flex-col flex-grow'>
 
-            <span className='mb-4 text-[#FFC200] font-semibold text-3xl'>James Donin</span>
+            <span className='mb-4 text-[#FFC200] capitalize font-semibold text-3xl'>{course?.instructorId?.userObjRef?.firstName} {course?.instructorId?.userObjRef?.lastName}</span>
 
             <div className='flex gap-2 flex-col'>
 
+              {/* this data will kept static until we have some huge data set */}
               <div className='flex gap-8 mb-2'>
                 
                 <div className='flex items-center gap-2'>
@@ -316,7 +436,7 @@ const SingleCourse = () => {
         <div className='flex gap-4 ml-auto'>
           
           <button className='px-6 py-2 bg-white text-[#403685] border-2 font-semibold border-[#403685] rounded-lg'>
-            <Link to={"/instructor/3"}>
+            <Link to={`/instructor/${course?.instructorId?._id}`}>
               Show Profile
             </Link>
           </button>
@@ -327,7 +447,7 @@ const SingleCourse = () => {
 
       </div>
       
-      {/* // ! TODO */}
+      {/* // ! TODO this data will kept static until we have some huge data set */}
       <div className='mt-12 px-12 mb-10'>
 
         <h3 className='text-[#002147] mb-6 font-semibold text-[28px]'>Learner reviews</h3>
@@ -424,6 +544,14 @@ const SingleCourse = () => {
       </div>
 
       </div>
+
+      {showPopup && (
+        <ConfirmationPopup
+          course={course}
+          onConfirm={(e) => handleEnroll(e)}
+          onCancel={(e) => handleCancel(e)}
+        />
+      )}
 
     </div>
 

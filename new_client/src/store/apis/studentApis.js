@@ -90,6 +90,49 @@ const studentApi = createApi({
         headers: { Authorization: `Bearer ${token}` },
       }),
     }),
+    addReminder: builder.mutation({
+      query: ({ token, courseId, reminderName, reminderType, reminderDays, reminderTime, reminderDateTime }) => ({
+        url: `/reminders`,
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: {
+          courseId,
+          reminderName,
+          reminderType,
+          ...(reminderType === "weekly" && { reminderDays }),
+          reminderTime,
+          ...(reminderType === "once" && { reminderDateTime }),
+        },
+      }),
+    }),
+    getAllReminders: builder.query({
+      query: ({token , courseId , page}) => ({
+        url: `/reminders/${courseId}?page=${page}`,
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}`},
+      }),
+    }),
+    deleteReminder: builder.mutation({
+      query: ({token , reminderId}) => ({
+        url: `/reminders/${reminderId}`,
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}`},
+      }),
+    }),
+    updateReminder: builder.mutation({
+      query: ({ token, reminderId, reminderName, reminderType, reminderDays, reminderTime, reminderDateTime }) => ({
+        url: `/reminders/${reminderId}`,
+        method: "PUT",
+        headers: { Authorization: `Bearer ${token}` },
+        body: {
+          reminderName,
+          reminderType,
+          ...(reminderType === "weekly" && { reminderDays }),
+          reminderTime,
+          ...(reminderType === "once" && { reminderDateTime }),
+        },
+      }),
+    }),    
     setCourseLastProgress: builder.mutation({
       query: ({token , courseId , sectionId , itemId , attachmentId}) => ({
         url: `/set-last-progress`,
@@ -105,8 +148,39 @@ const studentApi = createApi({
         headers: { Authorization: `Bearer ${token}` },
       }),
     }),
+    addNote: builder.mutation({
+      query: ({token , courseId , content}) => ({
+        url: `/notes/${courseId}`,
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body : {content}
+      }),
+    }),
+    getAllNotesForCourse: builder.query({
+      query: ({token , courseId , page}) => ({
+        url: `/notes/${courseId}?page=${page}`,
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    }),
+    updateNote: builder.mutation({
+      query: ({token , courseId , noteId , content}) => ({
+        url: `/notes/${courseId}/notes/${noteId}`,
+        method: "PUT",
+        headers: { Authorization: `Bearer ${token}` },
+        body : {content}
+      }),
+    }),
+    deleteNote: builder.mutation({
+      query: ({token , courseId , noteId}) => ({
+        url: `/notes/${courseId}/notes/${noteId}`,
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    }),
   }),
 });
+
 
 
 
@@ -124,7 +198,15 @@ const {
   useGenerateStudentGradesExcelMutation ,
   useGetAllStudentCoursesNoPagingQuery ,
   useSetCourseLastProgressMutation,
-  useGetCourseLastProgressQuery
+  useGetCourseLastProgressQuery ,
+  useAddReminderMutation ,
+  useGetAllRemindersQuery ,
+  useUpdateReminderMutation,
+  useDeleteReminderMutation ,
+  useAddNoteMutation ,
+  useGetAllNotesForCourseQuery ,
+  useUpdateNoteMutation ,
+  useDeleteNoteMutation
 } = studentApi
 
  
@@ -145,5 +227,13 @@ export {
   useGetAllStudentCoursesNoPagingQuery ,
   useSetCourseLastProgressMutation ,
   useGetCourseLastProgressQuery ,
+  useAddReminderMutation ,
+  useGetAllRemindersQuery ,
+  useUpdateReminderMutation ,
+  useDeleteReminderMutation ,
+  useAddNoteMutation ,
+  useGetAllNotesForCourseQuery ,
+  useUpdateNoteMutation ,
+  useDeleteNoteMutation ,
   studentApi ,
 }

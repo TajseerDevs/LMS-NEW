@@ -2,6 +2,24 @@ const mongoose = require("mongoose");
 
 
 
+const NoteSchema = new mongoose.Schema({
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "users",
+    required: true,
+  },
+  content: {
+    type: String,
+    required: false, 
+  },
+  timestamp: {
+    type: Date,
+    default: Date.now,
+  },
+}, { _id: true });
+
+
+
 const BadgeSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
@@ -29,6 +47,7 @@ const StudentSchema = new mongoose.Schema({
   coursesEnrolled: [{ type: mongoose.Schema.Types.ObjectId, ref: "courses" }],
   parentId: { type: mongoose.Schema.Types.ObjectId, ref: "parents" },
   badges: [BadgeSchema],
+  notes: [NoteSchema],
   courseProgress: [
     {
       courseId: { type: mongoose.Schema.Types.ObjectId, ref: "courses" },

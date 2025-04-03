@@ -45,7 +45,8 @@ const {
     getStudentGrades,
     getAllStudentCoursesNoPaging,
     generateStudentGradesExcel,
-    getAllCoursesCompletionPercentagePaging
+    getAllCoursesCompletionPercentagePaging,
+    getLatestReminders
 } = require("../controllers/student.controller")
 
 
@@ -122,7 +123,7 @@ router.get("/grades-excel-sheet-report" , protectRoutes , generateStudentGradesE
 
 router.post('/reminders' , protectRoutes , addReminder)
 
-router.get('/reminders' , protectRoutes , getAllReminders)
+router.get('/reminders/:courseId' , protectRoutes , getAllReminders)
 
 router.put('/reminders/:reminderId' , protectRoutes , updateReminder)
 
@@ -132,15 +133,15 @@ router.delete('/reminders/:reminderId' , protectRoutes , deleteReminder)
 
 
 
-router.post("/notes/:courseId/sections/:sectionId/items/:itemId" , protectRoutes , addNote)
+router.post("/notes/:courseId" , protectRoutes , addNote)
 
 router.get("/notes/:courseId" , protectRoutes , getAllNotesForCourse)
 
 router.get("/notes/:courseId/sections/:sectionId/items/:itemId" , protectRoutes , getNotesForItem)
 
-router.put("/notes/:courseId/sections/:sectionId/items/:itemId/notes/:noteId" , protectRoutes , updateNote)
+router.put("/notes/:courseId/notes/:noteId" , protectRoutes , updateNote)
 
-router.delete("/notes/:courseId/sections/:sectionId/items/:itemId/notes/:noteId" , protectRoutes , deleteNote)
+router.delete("/notes/:courseId/notes/:noteId" , protectRoutes , deleteNote)
 
 router.get("/notes/export-pdf/:courseId" , protectRoutes , exportPdfNotes)
 
