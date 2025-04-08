@@ -8,13 +8,12 @@ import rankIcon from "../assets/rank-icon.png"
 import testImage from "../assets/test.png" 
 
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip , ResponsiveContainer , PieChart, Pie, Sector, Cell } from 'recharts'
-import { useCalculateStudentAttendanceQuery, useGetAllCoursesCompletionPercentageQuery, useGetAllStudentCoursesQuery, useGetAvgLessonsProgressQuery, useGetStudentProgressQuery } from '../store/apis/studentApis'
+import { useCalculateStudentAttendanceQuery, useGetAllCoursesCompletionPercentagePagingQuery, useGetAllCoursesCompletionPercentageQuery, useGetAllStudentCoursesQuery, useGetAvgLessonsProgressQuery, useGetStudentProgressQuery } from '../store/apis/studentApis'
 import { useSelector } from 'react-redux'
 import { formatLastLogin } from '../utils/formatLastLogin'
 import MessagesPanel from './MessagesPanel'
 import CourseCard from './CourseCard'
 import { useGetAllCoursesQuery, useGetNotEnrolledCoursesQuery, useSuggestTopRatedCoursesQuery } from '../store/apis/courseApis'
-import courses from '../data/courses'
 import {Link , useNavigate} from "react-router-dom"
 
 
@@ -32,18 +31,16 @@ const Dashboard = () => {
   const {data : studentEnrolledCourses , isError , isLoading} = useGetAllStudentCoursesQuery({token})
   const {data : studentAttendanceAvg } = useCalculateStudentAttendanceQuery({token})
   const {data : studentLessonsProgress } = useGetAvgLessonsProgressQuery({token})
-  const {data : studentCoursesCompletionPercentage } = useGetAllCoursesCompletionPercentageQuery({token}) // ! TODO use it insted of coursesProgress domy array when there is real data
   const {data : studentCoursesProgress } = useGetStudentProgressQuery({token})
   const {data : studentNotEnrolledCourses , refetch : refetchStudentNotEnrolledCourses } = useGetNotEnrolledCoursesQuery({token})
   const {data : suggestedTopCourses} = useGetAllCoursesQuery({token , page}) // replace with most popular courses api when there is a courses data
   const {data : enrolledCourses , refetch : refetchEnrolledCourses} = useGetAllStudentCoursesQuery({token})
+  const {data : coursesProgress} = useGetAllCoursesCompletionPercentagePagingQuery({token})
   
-  console.log(studentNotEnrolledCourses)
-
   const attendanceAvg = parseFloat(studentAttendanceAvg?.attendance.replace('%', ''))
 
   const [currentWeek, setCurrentWeek] = useState(new Date())
-  const [selectedDay, setSelectedDay] = useState(null);
+  const [selectedDay, setSelectedDay] = useState(null)
 
 
   const getStartOfWeek = (date) => {
@@ -55,6 +52,7 @@ const Dashboard = () => {
     return startDate
   }
 
+
   const getWeekDays = () => {
 
     const startOfWeek = getStartOfWeek(currentWeek)
@@ -65,6 +63,7 @@ const Dashboard = () => {
       day.setDate(day.getDate() + i)
       days.push(day)
     }
+
     return days
 
   }
@@ -133,7 +132,7 @@ const Dashboard = () => {
   const y = cy + radius * Math.sin(-midAngle * RADIAN)
 
   return (
-    <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central">
+    <text key={index} x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central">
       {`${(percent * 100).toFixed(0)}%`}
     </text>
   )
@@ -141,53 +140,15 @@ const Dashboard = () => {
 }
 
 
-const coursesProgress = [
-  {
-    courseId: "67890",
-    courseName : "Mathematics 101",
-    totalAttachments: 10,
-    completedAttachments: 8,
-    progress: "60"
-  },
-  {
-    courseId: "23323",
-    courseName : "Physics 101",
-    totalAttachments: 10,
-    completedAttachments: 6,
-    progress: "80"
-  },
-  {
-    courseId: "12322",
-    courseName : "Chemistry 101",
-    totalAttachments: 12,
-    completedAttachments: 4,
-    progress: "100"
-  },
-  {
-    courseId: "123224342",
-    courseName : "Chemistry 103",
-    totalAttachments: 12,
-    completedAttachments: 4,
-    progress: "50"
-  },
-  {
-    courseId: "1232266",
-    courseName : "Chemistry 105",
-    totalAttachments: 12,
-    completedAttachments: 4,
-    progress: "70"
-  },
-]
-
-
   return (
+
     <div className='w-full flex flex-wrap justify-between items-start gap-14 p-8 '>
       
       <div className="w-full md:w-2/3">
 
         <div className='mb-8'>
 
-          <h1 className='text-[24px] md:lg:text-[36px] lg:text-[48px] text-[#002147] font-ultraBold mb-2'>Welcome Back {user?.firstName}</h1>
+          <h1 className='text-[24px] md:lg:text-[36px] lg:text-[48px] text-[#002147] font-ultraBold mb-2'>Welcome Back {user?.firstName} {user?.lastName}</h1>
 
           <span className="text-[16px] md:text-[20px] lg:text-[24px] font-mediumBold text-[#002147]">
             {formatLastLogin(user?.lastLogin)}
@@ -217,27 +178,24 @@ const coursesProgress = [
                 <p className="text-[20px] md:text-[24px] lg:text-[28px] font-bold text-[#FFC200]">{studentAttendanceAvg?.attendance}</p>
               </div>
 
-
               <CircularProgressIcon progress={attendanceAvg} color={"#FFC200"} icon={attendanceIcon} />
 
             </div>
 
             {/* Rank */}
-            <div className="p-4 w-80 bg-[#FFF] shadow rounded-lg flex gap-4 justify-between items-center">
+          <div className="p-4 w-80 bg-[#FFF] shadow rounded-lg flex gap-4 justify-between items-center">
 
-              <div className="flex flex-col gap-3">
-                <h3 className="text-[18px] md:text-[22px] lg:text-[26px] text-[#6555BC] font-semibold">Progress</h3>
-                <p className="text-[20px] md:text-[24px] lg:text-[28px] text-center font-bold text-[#6555BC]">{studentLessonsProgress?.averageScore}%</p>
-              </div>
-
-              <CircularProgressIcon progress={studentLessonsProgress?.averageScore} color={"#6555BC"} icon={rankIcon} />
-
+            <div className="flex flex-col gap-3">
+              <h3 className="text-[18px] md:text-[22px] lg:text-[26px] text-[#6555BC] font-semibold">Progress</h3>
+              <p className="text-[20px] md:text-[24px] lg:text-[28px] text-center font-bold text-[#6555BC]">{studentLessonsProgress?.averageScore}%</p>
             </div>
+
+            <CircularProgressIcon progress={studentLessonsProgress?.averageScore} color={"#6555BC"} icon={rankIcon} />
+
+          </div>
 
         </div>
 
-      
-          
           <div className='mt-12'>
                 
             <h3 className='text-[#002147] font-ultraBold text-[20px] md:text-[26px] lg:text-[32px]'>My Progress</h3>
@@ -247,36 +205,36 @@ const coursesProgress = [
             <div className='w-fit max-w-[620px] flex flex-col h-[380px] p-8 px-6 border-2 border-gray-200 rounded-lg'>
   
               <div className="flex justify-between sticky top-0 z-10 pb-3">
-                <span className="text-[#101018] text-[20px] md:text-[22px] lg:text-[24px] font-mediumBold">Course Name</span>
-                <span className="mr-44 text-[#101018] text-[20px] md:text-[22px] lg:text-[24px] font-mediumBold">Progress</span>
+                <span className="text-[#101018] text-[18px] md:text-[20px] lg:text-[22px] font-mediumBold">Course Name</span>
+                <span className="mr-44 text-[#101018] text-[18px] md:text-[20px] lg:text-[22px] font-mediumBold">Progress</span>
               </div>
 
               <hr className="sticky top-[50px]" />
 
               <div className="overflow-y-auto overflow-x-hidden p-3 h-[calc(100% - 30px)]">
 
-                {coursesProgress.map((course) => (
+                {coursesProgress?.courses?.map((course) => (
 
-                  <div className='mb-4' key={course.courseId}>
+                  <div className='mb-4' key={course?.courseId}>
                     
                   <div className='flex items-center justify-between gap-7 2xl:gap-14'>
                       
                     <div className='flex flex-col 2xl:flex-row p-2 mb-2 justify-center items-center gap-2'>
 
-                      <img 
+                      <img  
                         src={testImage}
                         alt="Course Thumbnail" 
                         className="w-12 h-12 rounded-full object-cover" 
                       />
 
                       <div className="flex flex-col 2xl:ml-4 gap-1 ">
-                        <span className="text-[18px] font-medium text-gray-800">{course.courseName}</span>
-                        <span className="text-[16px] text-gray-700">{course.totalAttachments} Sections</span>
+                        <span className="text-[18px] font-medium text-gray-800">{course?.courseName}</span>
+                        <span className="text-[16px] text-gray-700">{course?.totalAttachments} Sections</span>
                       </div>
 
                     </div>
 
-                    <ProgressBar percentage={course.progress} color={course.progress === "100" ? "#FFC200" : "#6555BC"} />
+                    <ProgressBar percentage={course?.progress} color={course?.progress === "100%" ? "#FFC200" : "#6555BC"} />
 
                   </div>
 
@@ -290,7 +248,7 @@ const coursesProgress = [
 
             </div>
               
-              <div className='w-fit max-w-[620px] h-[380px] p-6 border-2 border-gray-200 rounded-lg flex'>
+              <div className='w-[620px] h-[380px] p-6 border-2 border-gray-200 rounded-lg flex'>
 
               <div className="w-1/2 flex flex-col gap-4">
 
@@ -298,7 +256,7 @@ const coursesProgress = [
 
                   <div className="flex flex-col mt-2 gap-8">
 
-                    <div className="flex items-center gap-3 text-[17px] md:text-[18px] text-gray-700">
+                    <div className="flex items-center gap-3 text-[15px] md:text-[16px] text-gray-700">
 
                     <div className="w-4 h-4 rounded-full" style={{ backgroundColor: COLORS[0] }}></div>
 
@@ -306,7 +264,7 @@ const coursesProgress = [
 
                     </div>
 
-                    <div className="flex items-center gap-3 text-[17px] md:text-[18px] text-gray-700">
+                    <div className="flex items-center gap-3 text-[15px] md:text-[16px] text-gray-700">
 
                     <div className="w-4 h-4 rounded-full" style={{ backgroundColor: COLORS[1] }}></div>
 
@@ -314,7 +272,7 @@ const coursesProgress = [
 
                     </div>
 
-                    <div className="flex items-center gap-3 text-[17px] md:text-[18px] text-gray-700">
+                    <div className="flex items-center gap-3 text-[15px] md:text-[16px] text-gray-700">
 
                     <div className="w-4 h-4 rounded-full" style={{ backgroundColor: COLORS[2] }}></div>
 
@@ -325,9 +283,9 @@ const coursesProgress = [
                   </div>
 
                 </div>
-                <div className="w-1/2 flex ml-2 items-center justify-center">
 
-                  
+                <div className="w-1/2 flex ml-2 items-center justify-center">
+  
                   <ResponsiveContainer width="100%" height="100%">
 
                     <PieChart width={700} height={700}>
@@ -355,14 +313,12 @@ const coursesProgress = [
 
                 </div>
 
-
               </div>
 
             </div>
 
           </div>
 
-     
         <div className="mb-5">
 
           <div className="max-w-[calc(100%-250px)] w-full"> 

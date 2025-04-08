@@ -1,49 +1,36 @@
 import React, { useState } from "react"
 import BookMarkCard from '../../components/BookMarkCard'
-import { FaFilter } from "react-icons/fa";
-import { useGetCoursesLearningCategoriesQuery } from "../../store/apis/courseApis";
-import { useSelector } from "react-redux";
+import { FaFilter } from "react-icons/fa"
+import { useGetCoursesLearningCategoriesQuery } from "../../store/apis/courseApis"
+import { useSelector } from "react-redux"
+import { useGetBookMarksQuery } from "../../store/apis/studentApis"
+
+
 
 
 const BookMark = () => {
     
     const {user , token} = useSelector((state) => state?.user)
 
-    const [selectedCategory, setSelectedCategory] = useState("");
+    const [selectedCategory, setSelectedCategory] = useState("")
     const [sortOrder, setSortOrder] = useState("")
+    const [page , setPage] = useState(1)
 
     const {data : learningCategories } = useGetCoursesLearningCategoriesQuery({token})
-    
-    const bookMarkItems = [
-        { id: 1, title: "Introduction to HTML & CSS", price: 80, reviews: 120, rating: 4.5, duration: "50 Min" },
-        { id: 2, title: "Introduction to HTML & CSS", price: "Free", reviews: 120, rating: 4.5, duration: "50 Min" },
-        { id: 3, title: "Introduction to HTML & CSS", price: 80, reviews: 120, rating: 4.5, duration: "50 Min" },
-        { id: 4, title: "Introduction to HTML & CSS", price: "Free", reviews: 120, rating: 4.5, duration: "50 Min" },
-        { id: 5, title: "Advanced CSS", price: 120, reviews: 95, rating: 4.8, duration: "60 Min" },
-        { id: 6, title: "JavaScript Basics", price: 100, reviews: 150, rating: 4.6, duration: "70 Min" },
-        { id: 7, title: "React for Beginners", price: 150, reviews: 200, rating: 4.9, duration: "80 Min" },
-        { id: 8, title: "Node.js Essentials", price: 130, reviews: 180, rating: 4.7, duration: "90 Min" },
-        { id: 9, title: "Node.js Essentials", price: 130, reviews: 180, rating: 4.7, duration: "90 Min" },
-    ]
-    
-    const itemsPerPage = 10
-    
-    const [currentPage, setCurrentPage] = useState(1)
-    
-    const totalPages = Math.ceil(bookMarkItems.length / itemsPerPage)
-    
-    const startIndex = (currentPage - 1) * itemsPerPage
-    const displayedItems = bookMarkItems.slice(startIndex, startIndex + itemsPerPage)
+    const {data : bookedCourses , isLoading , refetch} = useGetBookMarksQuery({token , page})    
 
+    if(isLoading){
+        return <h1 className="text-xl p-10">Loading ...</h1>
+    }
 
     
   return (
 
-    <div className="w-full px-8 py-6">
+    <div className="w-full px-10 py-6">
 
-        <h1 className="text-3xl font-semibold text-[#002147] mb-6">Bookmark</h1>
+        <h1 className="text-3xl p-4 font-semibold text-[#002147] mb-6">Bookmark</h1>
 
-        <div className="flex justify-between mb-12">
+        <div className="flex p-4 justify-between mb-12">
 
             <input
                 type="text"
@@ -60,7 +47,7 @@ const BookMark = () => {
                     <option disabled selected>Category</option>
 
                     {
-                        learningCategories && learningCategories.map((category) => (
+                        learningCategories && learningCategories?.map((category) => (
                             <option value={category} key={category}>{category}</option>
                         ))
                     }
@@ -77,35 +64,49 @@ const BookMark = () => {
 
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-16 w-full">
+        <div className="w-full">
 
-            {displayedItems.map((item) => (
-                <BookMarkCard key={item.id} {...item} />
-            ))}
+            {bookedCourses?.bookmarks?.length > 0 ? (
 
-        </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-16 w-full">
+                    {bookedCourses?.bookmarks?.map((item) => (
+                        <BookMarkCard refetch={refetch} key={item.id} item={item} />
+                    ))}
+                </div>
+                    ) : (
+                <div className="w-full text-4xl capitalize text-center text-gray-500 py-10">
+                    <p>No bookmarked courses yet .</p>
+                </div>
 
-        <div className="flex justify-center items-center gap-4 mt-20">
-
-            <button
-                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                className={`px-5 py-2 rounded-lg font-medium ${currentPage === 1 ? "bg-gray-300 cursor-not-allowed" : "bg-blue-500 text-white"}`}
-                disabled={currentPage === 1}
-            >
-                Previous
-            </button>
-            
-            <span className="text-lg font-semibold">Page {currentPage} of {totalPages}</span>
-
-            <button
-                onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                className={`px-5 py-2 rounded-lg font-medium ${currentPage === totalPages ? "bg-gray-300 cursor-not-allowed" : "bg-blue-500 text-white"}`}
-                disabled={currentPage === totalPages}
-            >
-                Next
-            </button>
+            )}
 
         </div>
+
+        {bookedCourses?.bookmarks?.length !== 0 && (
+
+            <div className="flex justify-center items-center gap-4 mt-20">
+
+                {/* <button
+                    onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                    className={`px-5 py-2 rounded-lg font-medium ${currentPage === 1 ? "bg-gray-300 cursor-not-allowed" : "bg-blue-500 text-white"}`}
+                    disabled={currentPage === 1}
+                >
+                    Previous
+                </button>
+                
+                <span className="text-lg font-semibold">Page {currentPage} of {totalPages}</span>
+
+                <button
+                    onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                    className={`px-5 py-2 rounded-lg font-medium ${currentPage === totalPages ? "bg-gray-300 cursor-not-allowed" : "bg-blue-500 text-white"}`}
+                    disabled={currentPage === totalPages}
+                >
+                    Next
+                </button> */}
+
+            </div>
+
+        )}
 
     </div>
 

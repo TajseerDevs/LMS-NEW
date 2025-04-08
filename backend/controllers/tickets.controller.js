@@ -2,7 +2,7 @@ const Ticket = require("../models/Ticket")
 const Joi = require("joi")
 const User = require("../models/User")
 const createError = require("../utils/createError")
-
+const generateUniqueTicketCode = require("../utils/generateUniqueTicketCode")
 
 
 
@@ -27,11 +27,19 @@ const getAllUserTickets = async (req , res , next) => {
 
         userTickets = userTickets.filter(ticket => ticket !== undefined && ticket !== null)
 
-        res.status(200).json(userTickets)
+        let totalTickets = await Ticket.countDocuments({ userObjRef: user._id , isArchived : false })
+
+        res.status(200).json({
+            userTickets ,
+            page ,
+            totalTickets ,
+            totalPages : totalTickets > 0 ? Math.ceil(totalTickets / limit) : 1 
+        })
 
     } catch (error) {
         next(error)
     }
+
 }
 
 
@@ -41,17 +49,17 @@ const addNewTicket = async (req , res , next) => {
 
     const ticketSchema = Joi.object({
         regarding : Joi.string().valid("content" , "technical").required(),
-        priority : Joi.string().valid("Low" , "Medium" , "urgent").optional(),
+        priority : Joi.string().valid("low" , "medium" , "urgent").optional(),
         subject : Joi.string().required(),
         details : Joi.string().required(),
-        info : Joi.string().required(),
+        info : Joi.string().optional(),
         courseId: Joi.string().required(),
     })
 
     const { value, error } = ticketSchema.validate(req.body, {
         abortEarly: false,
     })
-
+    
     if (error) {
         return next(createError("Inavlid Ticket Credentials" , 500))
     }
@@ -60,9 +68,11 @@ const addNewTicket = async (req , res , next) => {
         
         const {regarding , subject , details , info , courseId , priority } = value
 
-        if(!regarding || !subject || !details || !info) { 
+        if(!regarding || !subject || !details) { 
             return next(createError("Invalid Ticket Credentials" , 400))
         }
+
+        const ticketCode = await generateUniqueTicketCode()
 
         const newTicket = new Ticket({
             regarding,
@@ -70,7 +80,8 @@ const addNewTicket = async (req , res , next) => {
             details,
             info ,
             userObjRef : req.user._id ,
-            courseRef: courseId
+            courseRef: courseId ,
+            ticketCode
         })
 
         // if user provide the ticket priority we add it if not it will be a Low default value
@@ -85,6 +96,53 @@ const addNewTicket = async (req , res , next) => {
     } catch (error) {
         next(error)
     }
+
+}
+
+
+
+
+const updateTicket = async (req , res , next) => {
+
+    const schema = Joi.object({
+        subject: Joi.string().optional(),
+        details: Joi.string().optional(),
+    })
+    
+    const { value , error } = schema.validate(req.body, { abortEarly: false });
+    
+    if (error) {
+        return next(createError("Invalid update data", 400))
+    }
+
+    try {
+        
+        const { ticketId } = req.params
+
+        const ticket = await Ticket.findById(ticketId)
+    
+        if (!ticket) {
+          return next(createError("Ticket not found", 404))
+        }
+
+        if (ticket.userObjRef.toString() !== req.user._id.toString()) {
+            return next(createError("Not authorized to update this ticket", 403));
+        }
+
+        ticket.subject = value.subject
+        ticket.details = value.details
+    
+        await ticket.save()
+
+        res.status(200).json({
+            message: "Ticket updated successfully",
+            ticket ,
+        })
+
+    } catch (error) {
+        next(error)
+    }
+
 }
 
 
@@ -120,6 +178,7 @@ const deleteTicket = async (req , res , next) => {
     } catch (error) {
         next(error)
     }
+
 }
 
 
@@ -138,10 +197,10 @@ const getFilteredTickets = async (req , res , next) => {
             page: Joi.number().min(1).default(1)
         })
 
-        const { error, value } = filterSchema.validate(req.query, { abortEarly: false })
+        const { error , value } = filterSchema.validate(req.query , { abortEarly: false })
         
         if (error) {
-            return res.status(400).json({ success: false, errors: error.details.map(err => err.message)})
+            return res.status(400).json({ success: false , errors: error.details.map(err => err.message)})
         }
 
         const { regarding , status , priority , courseRef , isArchived , page } = value
@@ -183,6 +242,7 @@ const getFilteredTickets = async (req , res , next) => {
 module.exports = {
     getAllUserTickets , 
     addNewTicket , 
+    updateTicket ,
     deleteTicket ,
     getFilteredTickets
 }

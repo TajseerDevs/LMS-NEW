@@ -10,7 +10,7 @@ const ProgressBar = ({ percentage = 0, color = "#000" }) => {
         
         <div
           className="h-full rounded-full transition-all duration-300"
-          style={{ width: `${percentage}%`, backgroundColor: color }}
+          style={{ width: `${percentage}`, backgroundColor: color }}
         ></div>
 
       </div>
@@ -18,7 +18,7 @@ const ProgressBar = ({ percentage = 0, color = "#000" }) => {
       <span
         className="text-lg w-[40px] text-right font-medium ml-1 text-gray-700"
       >
-        {percentage}%
+        {percentage}
       </span>
 
     </div>

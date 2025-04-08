@@ -178,8 +178,51 @@ const studentApi = createApi({
         headers: { Authorization: `Bearer ${token}` },
       }),
     }),
+    getBookMarks: builder.query({
+      query: ({token , page}) => ({
+        url: `/bookmarks?page=${page}`,
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    }),
+    addToBookMark: builder.mutation({
+      query: ({token , courseId}) => ({
+        url: `/add-bookmark/${courseId}`,
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    }),
+    removeFromBookMark: builder.mutation({
+      query: ({token , courseId}) => ({
+        url: `/remove-bookmark/${courseId}`,
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    }),
+    addToWishlist: builder.mutation({
+      query: ({token , courseId}) => ({
+        url: `/add-whishlist/${courseId}`,
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    }),
+    removeFromWishlist: builder.mutation({
+      query: ({token , courseId}) => ({
+        url: `/remove-whishlist/${courseId}`,
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    }),
+    getWishlist: builder.query({
+      query: ({token , page}) => ({
+        url: `/whishlist?page=${page}`,
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    }),
   }),
 });
+
 
 
 
@@ -206,12 +249,19 @@ const {
   useAddNoteMutation ,
   useGetAllNotesForCourseQuery ,
   useUpdateNoteMutation ,
-  useDeleteNoteMutation
+  useDeleteNoteMutation ,
+  useGetBookMarksQuery ,
+  useAddToBookMarkMutation ,
+  useRemoveFromBookMarkMutation ,
+  useAddToWishlistMutation ,
+  useRemoveFromWishlistMutation ,
+  useGetWishlistQuery
 } = studentApi
 
  
 
        
+
 export {
   useGetAllStudentCoursesQuery ,
   useCalculateStudentAttendanceQuery ,
@@ -235,5 +285,11 @@ export {
   useGetAllNotesForCourseQuery ,
   useUpdateNoteMutation ,
   useDeleteNoteMutation ,
+  useGetBookMarksQuery ,
+  useAddToBookMarkMutation ,
+  useRemoveFromBookMarkMutation ,
+  useAddToWishlistMutation,
+  useRemoveFromWishlistMutation ,
+  useGetWishlistQuery ,
   studentApi ,
 }

@@ -888,20 +888,16 @@ const addToWishlist = async (req, res, next) => {
 
     if (!user) return next(createError("User does not exist", 404))
 
-    const student = await Student.findOne({ userObjRef: req.user._id })
+    const isStudentExist = await Student.findOne({ userObjRef: req.user._id })
 
-    if (!student) return next(createError("Student does not exist", 404))
+    if (!isStudentExist) return next(createError("Student does not exist"))
 
     const course = await Course.findById(courseId)
 
     if (!course) return next(createError("Course does not exist", 404))
 
-    if (student.coursesEnrolled.includes(courseId)) {
-      return next(createError("you are enrolled in this course", 400))
-    }
-
     if (user.wishlist.includes(courseId)) {
-      return next(createError("Course already in your wishlist", 409))
+      return next(createError("Course is already bookmarked", 409))
     }
 
     user.wishlist.push(courseId)
@@ -909,12 +905,12 @@ const addToWishlist = async (req, res, next) => {
     await user.save()
 
     res.status(200).json({
-      wishlist: user.wishlist,
-      message: "Course added to wishlist",
+      whishlist: user.whishlist,
+      message: "Course added to bookmarks",
     })
 
-  } catch (error) {
-    next(error)
+  } catch (err) {
+    next(err)
   }
 
 }
@@ -923,48 +919,53 @@ const addToWishlist = async (req, res, next) => {
 
 
 const removeFromWishlist = async (req, res, next) => {
+
   try {
-    const { courseId } = req.params;
 
-    const user = await User.findById(req.user._id);
+    const { courseId } = req.params
 
-    if (!user) return next(createError("User does not exist", 404));
+    const user = await User.findById(req.user._id)
 
-    const student = await Student.findOne({ userObjRef: req.user._id });
+    if (!user) return next(createError("User does not exist", 404))
 
-    if (!student) return next(createError("Student does not exist", 404));
+    const isStudentExist = await Student.findOne({ userObjRef: req.user._id })
 
-    const course = await Course.findById(courseId);
+    if (!isStudentExist) return next(createError("Student does not exist"))
 
-    if (!course) return next(createError("Course does not exist", 404));
+    const course = await Course.findById(courseId)
 
-    if (!user.wishlist.includes(courseId)) {
-      return next(createError("Course is not in your wishlist", 404));
+    if (!course) return next(createError("Course does not exist", 404))
+
+    if (user.wishlist.includes(courseId)) {
+      user.wishlist = user.wishlist.filter(
+        (ob) => ob.toString() !== courseId.toString()
+      )
+    } else {
+      return next(createError("Course is not bookmarked", 404));
     }
 
-    user.wishlist = user.wishlist.filter(
-      (course) => course.toString() !== courseId
-    );
-
-    await user.save();
+    await user.save()
 
     res.status(200).json({
-      wishlist: user.wishlist,
-      message: "Course removed from wishlist",
-    });
+      message: "Course remove from bookmarks",
+    })
+
   } catch (err) {
-    next(err);
+    next(err)
   }
-};
+
+}
 
 
 
 
 const getWishlist = async (req, res, next) => {
+
   try {
-    const page = Number(req.query.page) || 1;
-    const limit = 10;
-    const skip = (page - 1) * limit;
+
+    const page = Number(req.query.page) || 1
+    const limit = 10
+    const skip = (page - 1) * limit
 
     const user = await User.findById(req.user._id)
       .populate({
@@ -979,26 +980,34 @@ const getWishlist = async (req, res, next) => {
         },
       })
       .skip(skip)
-      .limit(limit);
+      .limit(limit)
 
     if (!user) {
       return next(createError("User does not exist", 404));
     }
 
-    const totalUserWhishList = await User.countDocuments(req.user._id).populate(
-      "wishlist"
-    );
+    const totalWhishList = user.wishlist.length
+
+    if (!user) return next(createError("User does not exist", 404))
+
+    const isStudentExist = await Student.findOne({ userObjRef: req.user._id })
+
+    if (!isStudentExist) return next(createError("Student does not exist"))
+
+    const totalPages = totalWhishList > 0 ? Math.ceil(totalWhishList / limit) : 1
 
     res.status(200).json({
-      wishlist: user.wishlist,
-      page,
-      totalUserWhishList,
-      totalPages: Math.ceil(totalUserWhishList / limit),
-    });
+      page ,
+      whishlist: user.wishlist ,
+      totalWhishList ,
+      totalPages ,
+    })
+
   } catch (err) {
-    next(err);
+    next(err)
   }
-};
+
+}
 
 
 
@@ -1147,10 +1156,12 @@ const assignAdaptiveContent = async (req, res, next) => {
 
 
 const getBookMarks = async (req, res, next) => {
+
   try {
-    const page = Number(req.query.page) || 1;
-    const limit = 10;
-    const skip = (page - 1) * limit;
+
+    const page = Number(req.query.page) || 1
+    const limit = 10
+    const skip = (page - 1) * limit
 
     const user = await User.findById(req.user._id)
       .populate({
@@ -1165,62 +1176,69 @@ const getBookMarks = async (req, res, next) => {
         },
       })
       .skip(skip)
-      .limit(limit);
+      .limit(limit)
 
-    const totalBookmarks = await User.countDocuments(req.user._id).populate(
-      "bookmarks"
-    );
+    const totalBookmarks = user.bookmarks.length
 
-    if (!user) return next(createError("User does not exist", 404));
+    if (!user) return next(createError("User does not exist", 404))
 
-    const isStudentExist = await Student.findOne({ userObjRef: req.user._id });
+    const isStudentExist = await Student.findOne({ userObjRef: req.user._id })
 
-    if (!isStudentExist) return next(createError("Student does not exist"));
+    if (!isStudentExist) return next(createError("Student does not exist"))
+
+    const totalPages = totalBookmarks > 0 ? Math.ceil(totalBookmarks / limit) : 1
 
     res.status(200).json({
-      page,
-      bookmarks: user.bookmarks,
-      totalBookmarks,
-      totalPages: Math.ceil(totalBookmarks / limit),
-    });
+      page ,
+      bookmarks: user.bookmarks ,
+      totalBookmarks ,
+      totalPages ,
+    })
+
   } catch (err) {
-    next(err);
+    next(err)
   }
+
 }
 
 
 
 
 const addToBookMark = async (req, res, next) => {
+
   try {
-    const { courseId } = req.params;
 
-    const user = await User.findById(req.user._id);
+    const { courseId } = req.params
 
-    if (!user) return next(createError("User does not exist", 404));
+    const user = await User.findById(req.user._id)
 
-    const isStudentExist = await Student.findOne({ userObjRef: req.user._id });
+    if (!user) return next(createError("User does not exist", 404))
 
-    if (!isStudentExist) return next(createError("Student does not exist"));
+    const isStudentExist = await Student.findOne({ userObjRef: req.user._id })
+
+    if (!isStudentExist) return next(createError("Student does not exist"))
 
     const course = await Course.findById(courseId);
 
-    if (!course) return next(createError("Course does not exist", 404));
+    if (!course) return next(createError("Course does not exist", 404))
 
     if (user.bookmarks.includes(courseId)) {
-      return next(createError("Course is already bookmarked", 409));
+      return next(createError("Course is already bookmarked", 409))
     }
 
-    user.bookmarks.push(courseId);
-    await user.save();
+    user.bookmarks.push(courseId)
+
+    await user.save()
 
     res.status(200).json({
       bookmark: user.bookmarks,
       message: "Course added to bookmarks",
-    });
+    })
+
   } catch (err) {
-    next(err);
+    next(err)
   }
+
 }
 
 
@@ -1318,7 +1336,7 @@ const generateCertificate = async (req , res , next) => {
     const progress = progressPercentage.toFixed(2)
 
     if (progress < 100) {
-      return next(createError("Certificate cannot be generated until the course is fully completed", 400))
+      return next(createError("Certificate cannot be generated until the course is fully completed" , 400))
     }
 
     const certificateNumber = generateCertificateNumber()

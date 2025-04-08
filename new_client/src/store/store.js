@@ -21,6 +21,7 @@ import { conversationApi } from "./apis/conversationApis";
 import { quizApi } from "./apis/quizApis";
 import { quizSlice } from "./slices/quizSlice";
 import { assigmentApi } from "./apis/assigmentApis";
+import { certificateApi } from "./apis/certificateApis";
 
 
 const store = configureStore({
@@ -44,6 +45,7 @@ const store = configureStore({
         [ticketsApi.reducerPath]: ticketsApi.reducer, 
         [messageApi.reducerPath]: messageApi.reducer, 
         [quizApi.reducerPath]: quizApi.reducer, 
+        [certificateApi.reducerPath]: certificateApi.reducer, 
         [conversationApi.reducerPath]: conversationApi.reducer, 
     },
     middleware:(getDefaultMiddleware)=>
@@ -61,6 +63,7 @@ const store = configureStore({
             .concat(messageApi.middleware)
             .concat(conversationApi.middleware)
             .concat(quizApi.middleware)
+            .concat(certificateApi.middleware)
             .concat(coursesApi.middleware),
         devTools: true,
 })

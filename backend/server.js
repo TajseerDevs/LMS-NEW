@@ -35,6 +35,7 @@
     const quizRoutes = require("./routes/quiz.routes")
     const assignmentRoutes = require("./routes/assignment.routes")
     const calendarRoutes = require("./routes/calendar.routes")
+    const certificateRoutes = require("./routes/certificate.routes")
 
 
     const connectDB = require("./db/connectDB")
@@ -94,6 +95,7 @@
     const docsUploadsDir = path.join(__dirname, "uploads/documents")
     const voicesUploadsDir = path.join(__dirname, "uploads/voices")
 
+
     if (!fs.existsSync(uploadsDir)) {
       fs.mkdirSync(uploadsDir, { recursive: true })
     }
@@ -142,6 +144,7 @@
     app.use("/api/v1/quiz" , quizRoutes)
     app.use("/api/v1/assignment" , assignmentRoutes)
     app.use("/api/v1/calendar" , calendarRoutes)
+    app.use("/api/v1/certificate" , certificateRoutes)
 
 
 

@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import EnrolledCoursesCard from '../../components/EnrolledCoursesCard'
 import { useSelector } from 'react-redux'
-import { useGetAllCoursesCompletionPercentageQuery, useGetAllStudentCoursesQuery } from '../../store/apis/studentApis'
+import { useGetAllCoursesCompletionPercentageQuery, useGetAllStudentCoursesQuery, useGetBookMarksQuery } from '../../store/apis/studentApis'
 
 
 
@@ -12,7 +12,8 @@ const EnrolledCourses = () => {
   const [page , setPage] = useState(1)
   
   // const {data : enrolledCourses} = useGetAllStudentCoursesQuery({token}) // ! TODO make new api to match the card data view 
-  const {data : enrolledCourses} = useGetAllCoursesCompletionPercentageQuery({token})
+  const {data : enrolledCourses , refetch} = useGetAllCoursesCompletionPercentageQuery({token})
+  const {data : bookedCourses , isLoading , refetch : refetchBookedCourses} = useGetBookMarksQuery({token , page})
 
   const [search, setSearch] = useState("")
   const [selectedCourse , setSelectedCourse] = useState("")
@@ -24,8 +25,8 @@ const EnrolledCourses = () => {
     endDate: "April 12, 2025",
   })
   
-  console.log(enrolledCourses)
 
+  
   return (
 
     <div className='w-full p-12'>
@@ -54,7 +55,7 @@ const EnrolledCourses = () => {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-16 w-full">
         {enrolledCourses?.courses?.map((course, index) => (
-          <EnrolledCoursesCard key={index} course={course} />
+          <EnrolledCoursesCard rfe={refetchBookedCourses} refetch={refetch} key={index} course={course} />
         ))}
       </div>
 

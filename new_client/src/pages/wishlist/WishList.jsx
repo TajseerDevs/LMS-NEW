@@ -1,8 +1,16 @@
 import React, { useState } from "react"
 import WishListCard from "../../components/WishListCard"
+import { useSelector } from "react-redux"
+import { useGetWishlistQuery } from "../../store/apis/studentApis"
 
 
 const WishListPage = () => {
+
+  const {user , token} = useSelector((state) => state.user)
+  const [page , setPage] = useState(1)
+
+  const {data : wishlistCourses , isLoading} = useGetWishlistQuery({token , page})
+
 
   const wishlistItems = [
     { id: 1, title: "Introduction to HTML & CSS", price: 80, reviews: 120, rating: 4.5, duration: "50 Min" },
@@ -26,9 +34,10 @@ const WishListPage = () => {
   const displayedItems = wishlistItems.slice(startIndex, startIndex + itemsPerPage)
 
 
+
   return (
 
-    <div className="w-full  px-8 py-6">
+    <div className="w-full px-10 py-6">
 
       <h1 className="text-3xl font-bold mb-6">Wishlist Courses</h1>
 
@@ -42,7 +51,7 @@ const WishListPage = () => {
 
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-16 w-full">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-20 w-full">
 
         {displayedItems.map((item) => (
           <WishListCard key={item.id} {...item} />
@@ -50,7 +59,7 @@ const WishListPage = () => {
 
       </div>
 
-      <div className="flex justify-center items-center gap-4 mt-20">
+      <div className="flex justify-center items-center gap-4 mt-28">
 
         <button
           onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}

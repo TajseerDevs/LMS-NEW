@@ -17,8 +17,13 @@ const ticketSchema = new mongoose.Schema({
     },
     info : {
         type : String ,
-        required : true
+        required : false
     },
+    ticketCode: {
+        type: String,
+        required: true,
+        unique: true
+    },      
     userObjRef : {type : mongoose.Schema.Types.ObjectId , ref : "users" , required : true},
     status : {
         type : String ,
@@ -29,7 +34,7 @@ const ticketSchema = new mongoose.Schema({
     priority : {
         type : String ,
         required : true,
-        enum : ["Low" , "Medium" , "urgent"],
+        enum : ["low" , "medium" , "urgent"],
         default : "Low"
     },
     supportTeamResponse : {

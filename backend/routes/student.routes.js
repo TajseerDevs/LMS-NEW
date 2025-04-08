@@ -91,6 +91,7 @@ router.patch("/remove-whishlist/:courseId" , protectRoutes , removeFromWishlist)
 
 router.get("/whishlist" , protectRoutes , getWishlist)
 
+
 router.get("/avg-lessons-progress" , protectRoutes , getAvgLessonsProgress)
 
 router.get("/weak-areas" , protectRoutes , getWeakAreas)

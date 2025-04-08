@@ -102,12 +102,14 @@ const EnrolledCourse = () => {
     const [reminderFilter, setReminderFilter] = useState("")
     const [editingReminder, setEditingReminder] = useState(null)
     const [isDeleteRminderModalOpen, setIsDeleteRminderModalOpen] = useState(false)
-    const [reminderToDelete, setReminderToDelete] = useState(null)
+    const [reminderToDelete, setReminderToDelete] = useState(null) 
 
     const [quizTabPage , setQuizTabPage] = useState(1)
     const [assignmentTabPage , setAssignmentTabPage] = useState(1)
     const [reminderTabPage , setReminderTabPage] = useState(1)
     const [notesTabPage , setNotesTabPage] = useState(1)
+
+    const [isDeleteNoteModalOpen, setIsDeleteNoteModalOpen] = useState(false)
 
 
 
@@ -476,11 +478,6 @@ const EnrolledCourse = () => {
     }
 
 
-    const handleDelete = () => {
-      setNotes(notes.filter((note) => note.id !== deleteNoteId))
-      closeDeleteModal()
-    }
-
 
     const handleEditClick = (note) => {
 
@@ -544,6 +541,10 @@ const EnrolledCourse = () => {
         setIsDeleteRminderModalOpen(false)
     }
 
+    const handleNoteModalClose = () => {
+        setIsDeleteNoteModalOpen(false)
+    }
+
 
     const handleDeleteConfirmation = async () => {
         try {
@@ -551,6 +552,20 @@ const EnrolledCourse = () => {
           await refetchCourseReminders()
           setIsDeleteRminderModalOpen(false)
           toast.success('Reminder deleted successfully!')
+        } catch (error) {
+          toast.error('Error deleting reminder')
+        }
+    }
+
+
+
+    const handleDeleteNoteConfirmation = async () => {
+        try {
+          await deleteNote({ token, noteId: deleteNoteId , courseId }).unwrap()
+          await refetchCourseNotes()
+          handleNoteModalClose()
+          setDeleteNoteId(null)
+          toast.success('note deleted successfully!')
         } catch (error) {
           toast.error('Error deleting reminder')
         }
@@ -857,7 +872,7 @@ const EnrolledCourse = () => {
 
                                         <div className="flex cursor-pointer items-center gap-4">
                                             <MdEdit onClick={() => handleEditClick(note)} className="text-[#6555BC]" size={28} />
-                                            <MdDeleteForever onClick={() => openDeleteModal(note?._id)} className="text-[#FC5A5A]" size={28} />
+                                            <MdDeleteForever onClick={() => {openDeleteModal(note?._id) ; setIsDeleteNoteModalOpen(true)}} className="text-[#FC5A5A]" size={28} />
                                         </div>
 
                                     </div>
@@ -1378,17 +1393,12 @@ const EnrolledCourse = () => {
 
         <FaqModal isOpen={isFaqModalOpen} onClose={() => setIsFaqModalOpen(false)} />
 
-        <DeleteNoteModal 
-            isOpen={deleteNoteId !== null} 
-            onClose={closeDeleteModal} 
-            onDelete={handleDelete} 
-        />
-
         {isCourseRateModalOpen && <CourseRatePopUp onClose={() => setIsCourseRateModalOpen(false)} />}
         {isFeedbackReportModalOpen && <ReportFeedbackPopUp onClose={() => setIsFeedbackReportModalOpen(false)} />}
         {isCourseReminderModalOpen && <CourseReminderModal editingReminder={editingReminder} refetch={refetchCourseReminders} courseId={courseId} onClose={() => {setIsCourseReminderModalOpen(false) ; setEditingReminder(null)}} />}
         {isDeleteRminderModalOpen && <DeleteReminderModal isOpen={isDeleteRminderModalOpen} onClose={handleModalClose} onDelete={handleDeleteConfirmation}/>}
-    
+        {isDeleteNoteModalOpen && <DeleteNoteModal onDelete={handleDeleteNoteConfirmation} isOpen={isDeleteNoteModalOpen} onClose={handleNoteModalClose}/> }
+
     </div>
 
     )

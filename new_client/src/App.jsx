@@ -81,17 +81,18 @@ function App() {
 
   const socket = useSocket()
 
+
   useEffect(() => {
 
     if (socket) {
 
       socket.on("connect", () => {
         console.log("Socket connected:", socket.id)
-      });
+      })
   
       socket.on("disconnect", () => {
         console.log("Socket disconnected")
-      });
+      })
   
       return () => {
         socket.off("connect")
@@ -117,11 +118,13 @@ function App() {
   }, [user])
 
 
+  
   const {data : cartItems , isLoading : isLoadingCartItems , refetch : refetchCartItems} = useGetCartItemsQuery({ token : user?.token , page : 1 } , {skip : !user?.token})
 
   const [getUser , getUserResponse] = useGetUserMutation()
   
   
+
   useEffect(() => {
   
     if (user.token && user.user === null) {
@@ -130,6 +133,7 @@ function App() {
     }
   
   }, [user?.token , user?.user])
+
 
 
 
@@ -157,6 +161,7 @@ function App() {
   // if (getUserResponse.isLoading || isLoadingCartItems) {
   //   return <Spinner/> 
   // }
+
 
   useEffect(() => {
     window.scrollTo(0, 0) // Scrolls to the top of the page on mount
@@ -203,7 +208,6 @@ function App() {
 
             <Route path="/instructor" element={<InstructorProtectedRoute> <Layout  /> </InstructorProtectedRoute>}>
 
-              {/* todo */} 
               <Route path="dashboard" element={<InstructorDashboard />} /> 
 
               <Route path="create-course" element={<CreateCourse />} /> 

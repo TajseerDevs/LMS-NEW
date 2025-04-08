@@ -246,7 +246,7 @@ const SingleCourse = () => {
               <YellowBtn text="Enroll now" />
             )}
 
-            <button
+            {/* <button
               className={`px-4 py-2 w-42 h-[58px] rounded-lg font-semibold shadow-md flex items-center gap-1 text-[16px] text-white`}
               onClick={() => setIsWishlist(!isWishlist)}
               style={{background: "radial-gradient(222.86% 355.83% at 0.9% 2.98%, rgba(255, 255, 255, 0.40) 0%, rgba(255, 255, 255, 0.18) 84.54%, rgba(255, 255, 255, 0.00) 100%)"}}
@@ -254,7 +254,7 @@ const SingleCourse = () => {
 
               <CiHeart size={22} className="text-sm" /> {isWishlist ? "Added" : "Add to Wishlist"}
                             
-            </button>
+            </button> */}
             
           </div>
 

@@ -59,51 +59,11 @@ const Header = ({openSideBar , setopenSideBar}) => {
                 <button className='text-white group'>
 
                     <div className='flex items-center gap-5'>
-                        <FaUserCircle className='w-6 text-[#6555BC] h-6 mt-1'/>
+                        <FaUserCircle onClick={() => navigate("/instructor/profile")} className='w-6 text-[#6555BC] h-6 mt-1'/>
                         <h4 className='mt-1 text-[18px] text-[#002147] capitalize'>{user?.firstName} {user?.lastName}</h4>
                     </div>
                     
                     <div className='z-10 hidden bg-white absolute rounded-lg shadow w-32 group-focus:block top-10 -right-5'>
-
-                    <ul className='py-3 px-4 flex flex-col text-sm text-white'>
-
-                        <li className='py-1 mb-1 hover:bg-blue-600 hover:text-white text-black rounded'>
-
-                            {
-                                user?.role === "instructor" ? (
-                                    <button onClick={() => navigate("/instructor/profile")} className=' flex ml-5 items-center justify-center px-2'>
-                                        Profile
-                                    </button>
-                                )
-                                :
-                                (
-                                    <Link to='/profile' className='block px-2'>
-                                        Profile
-                                    </Link>
-                                )
-                            }
-
-                        </li>
-                        
-                        <li className='py-1 mb-1 hover:bg-blue-600 hover:text-white text-black rounded'>
-
-                            <Link to='/settings' className='block px-2'>
-                                Settings
-                            </Link>
-
-                        </li>
-
-                        <li className='border-t border-gray-500 my-2'></li>
-
-                        <li className='py-1 hover:bg-blue-600 hover:text-white text-black rounded'>
-
-                            <Link to='#' className='blocktext-sm px-2'>
-                                Logout
-                            </Link>
-
-                        </li>
-
-                    </ul>
 
                     </div>
 

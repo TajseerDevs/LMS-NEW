@@ -18,6 +18,7 @@ import { SiQuizlet } from "react-icons/si";
 import { CgProfile } from "react-icons/cg";
 import enrolledIcon from "../assets/enrolled-icon.svg"
 import { BsFillFileEarmarkSpreadsheetFill } from "react-icons/bs";
+import { IoTicketSharp } from "react-icons/io5";
 
 
 
@@ -164,6 +165,11 @@ const Sidebar = ({ openSideBar , setopenSideBar }) => {
                                     {!openSideBar && <Link to="/certificate" className="ml-3">My Certificate</Link>}
                                 </li>
 
+                                <li onClick={() => {setopenSideBar(false) ; navigate("/student-tickets")}} className={`rounded py-2 cursor-pointer text-[#403685] px-3 flex items-center ${location.pathname === '/student-tickets' ? 'text-yellow-500' : 'hover:bg-gray-100'}`}>
+                                    <IoTicketSharp className={`${openSideBar ? "w-7 h-7" : "w-6 h-6"} mr-3`} />
+                                    {!openSideBar && <Link to="/student-tickets" className="ml-3">Support Tickets</Link>}
+                                </li>
+                                
                                 <li onClick={() => {setopenSideBar(false) ; navigate("/bookmark")}} className={`rounded py-2 cursor-pointer text-[#403685] px-3 flex items-center ${location.pathname === '/bookmark' ? 'text-yellow-500' : 'hover:bg-gray-100'}`}>
                                     <FaBookmark className={`${openSideBar ? "w-7 h-7" : "w-6 h-6"} mr-3`} />
                                     {!openSideBar && <Link to="/bookmark" className="ml-3">Bookmark</Link>}
@@ -268,14 +274,6 @@ const Sidebar = ({ openSideBar , setopenSideBar }) => {
             </div>
 
             <div className="space-y-4 mb-8 text-lg">
-
-                {user?.user?.role === "instructor" && (
-                    <li onClick={() => {setopenSideBar(false) ; navigate("/instructor/profile")}} className="rounded cursor-pointer py-2 font-semibold text-[#403685] px-3 flex items-center hover:bg-gray-100">
-                        <CgProfile className={`${openSideBar ? "w-7 h-7" : "w-6 h-6"} mr-3`} />
-                        {!openSideBar && <Link to="/instructor/profile" className="ml-3">Profile</Link>}
-                    </li>
-                ) }
-
                 <li onClick={handelLogout} className="rounded cursor-pointer py-2 font-semibold text-[#403685] px-3 flex items-center hover:bg-gray-100">
                     <FaSignOutAlt className={`${openSideBar ? "w-7 h-7" : "w-6 h-6"} mr-3`} />
                     {!openSideBar && <Link className="ml-3">Logout</Link>}

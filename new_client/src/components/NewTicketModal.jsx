@@ -3,7 +3,8 @@ import { useState } from 'react';
 import { useSelector } from 'react-redux';
 import { IoCloseSharp } from "react-icons/io5";
 import { useAddNewTicketMutation , useGetAllUserTicketsQuery } from '../store/apis/TicketApis';
-import { useGetAllStudentCoursesQuery} from '../store/apis/studentApis';
+import { useGetAllStudentCoursesNoPagingQuery} from '../store/apis/studentApis';
+import { toast } from 'react-toastify';
 
 
 
@@ -18,9 +19,53 @@ const NewTicketModal = ({openNewTicketModal , setOpenNewTicketModal}) => {
     const [priority , setPriority] = useState("low")
 
     const [addNewTicket , {isLoading : isLoadingAddNewTicket  , isError : isErrorAddNewTicket}] = useAddNewTicketMutation()
-    const {data : studentCourses , isLoading : isLoadingStudentCourses , isError : isErrorStudentCourses , refetch } = useGetAllStudentCoursesQuery({token})
+    const {data : studentCourses , isLoading : isLoadingStudentCourses , isError : isErrorStudentCourses} = useGetAllStudentCoursesNoPagingQuery({token})
+    const {refetch} = useGetAllUserTicketsQuery({token})
+
+
+    const addNewTicketFun = async () => {
+        
+        if (!subject.trim() || !courseId || !priority || !details.trim() || !regarding) {
+            if (!subject.trim()) toast.error("Please enter a subject.")
+            else if (!courseId) toast.error("Please select a course.")
+            else if (!regarding) toast.error("Please select a course.")
+            else if (!priority) toast.error("Please select a priority.")
+            else if (!details.trim()) toast.error("Please describe the issue.")
+            return
+        }
+
+        try {
+            
+            const ticketData = {
+                regarding,
+                subject,
+                courseId,
+                priority,
+                details,
+                token
+            }
+
+            const res = await addNewTicket(ticketData).unwrap()
+            toast.success("Ticket Added successfully!")
+
+            setOpenNewTicketModal(false)
+            refetch()
+
+            setSubject("")
+            setCourseId("")
+            setPriority("low")
+            setDetails("")
+            setRegarding("technical")
+
+        } catch (error) {
+            console.log(error)
+            toast.error(error?.data?.msg)    
+        }
+
+    }
 
     
+
 
   return (
 
@@ -105,9 +150,10 @@ const NewTicketModal = ({openNewTicketModal , setOpenNewTicketModal}) => {
                         onChange={(e) => setCourseId(e.target.value)} 
                         className="w-full border p-2 rounded mb-3"
                     >   
-                        <option value="">Select Course</option>
-                        <option value="course1">Course 1</option>
-                        <option value="course2">Course 2</option>
+                        <option value="" disabled>Select Course</option>
+                        {studentCourses?.studentCourses?.map((course) => (
+                            <option className='capitalize' value={course?._id}>{course?.title}</option>
+                        ))}
 
                     </select>
 
@@ -125,7 +171,7 @@ const NewTicketModal = ({openNewTicketModal , setOpenNewTicketModal}) => {
                         <option value="">Set the issue priority</option>
                         <option value="low">Low</option>
                         <option value="medium">Medium</option>
-                        <option value="Urgent">Urgent</option>
+                        <option value="urgent">Urgent</option>
 
                     </select>
 
@@ -147,8 +193,17 @@ const NewTicketModal = ({openNewTicketModal , setOpenNewTicketModal}) => {
             </div>
 
             <div className='flex gap-4 justify-end p-4 mr-2 mt-4'>
-                <button className='bg-[#FFC200] px-6 py-2 capitalize font-semibold rounded-xl'>submit</button>
+                
+                <button
+                    onClick={addNewTicketFun}
+                    disabled={isLoadingAddNewTicket}
+                    className='bg-[#FFC200] px-6 py-2 capitalize font-semibold rounded-xl'
+                >
+                    {isLoadingAddNewTicket ? "Submitting..." : "Submit"}
+                </button>
+
                 <button onClick={() => setOpenNewTicketModal(false)} className='bg-white cursor-pointer text-[#403685] border-2 border-[#403685] font-semibold px-6 py-2 capitalize rounded-xl'>cancel</button>
+            
             </div>
 
         </div>

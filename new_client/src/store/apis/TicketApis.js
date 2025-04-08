@@ -13,11 +13,11 @@ const ticketsApi = createApi({
             })
         }),
         addNewTicket: builder.mutation({
-            query: ({ token , regarding, subject, details, info , courseId}) => {
+            query: ({ token , regarding, subject, details, info , priority , courseId}) => {
                 return {
                     url: '/new-ticket',
                     method: 'POST',
-                    body: {regarding, subject, details, info , courseId},
+                    body: {regarding, subject, details, info , priority , courseId},
                     headers: { Authorization: `Bearer ${token}` }
                 }
             }
@@ -29,8 +29,17 @@ const ticketsApi = createApi({
                 headers: { Authorization: `Bearer ${token}` }
             }),
         }),
+        updateTicket: builder.mutation({
+            query: ({token ,ticketId , subject , details}) => ({
+                url: `/update/${ticketId}`,
+                method: 'PUT',
+                headers: { Authorization: `Bearer ${token}` } ,
+                body : {subject , details}
+            }),
+        }),
     })
 })
+
 
 
 
@@ -38,12 +47,15 @@ const {
     useGetAllUserTicketsQuery,
     useAddNewTicketMutation,
     useDeleteTicketMutation,
+    useUpdateTicketMutation
 } = ticketsApi
+
 
 
 export {
     useGetAllUserTicketsQuery,
     useAddNewTicketMutation,
     useDeleteTicketMutation,
+    useUpdateTicketMutation ,
     ticketsApi
 } 

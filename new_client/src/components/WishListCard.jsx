@@ -8,7 +8,7 @@ const WishListCard = () => {
 
   return (
 
-    <div className=" ">
+    <div className="relative mb-10">
       
       <div className='relative'>
         
@@ -17,11 +17,11 @@ const WishListCard = () => {
         <div className='absolute z-50 top-4 right-4 flex items-center gap-4'>
 
             <span className='p-3 rounded-full' style={{background: "radial-gradient(231% 135.8% at 0.9% 2.98%, rgba(255, 255, 255, 0.40) 0%, rgba(255, 255, 255, 0.00) 100%)"}}>
-                <IoMdShareAlt size={24} className='text-white'/>
+              <IoMdShareAlt size={24} className='text-white'/>
             </span>
 
             <span className='p-3 rounded-full filter' style={{background: "radial-gradient(231% 135.8% at 0.9% 2.98%, rgba(255, 255, 255, 0.40) 0%, rgba(255, 255, 255, 0.00) 100%)"}}>
-                <FaHeart size={24} className='text-[#FC5A5A]'/>
+              <FaHeart size={24} className='text-[#FC5A5A]'/>
             </span>
 
         </div>

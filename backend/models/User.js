@@ -89,6 +89,14 @@ const userSchema = new mongoose.Schema({
         type: Array,
         default: [],
     },
+    bookmarks: {
+        type: [{type : mongoose.Schema.Types.ObjectId , ref : "courses"}],
+        default: [],
+    },
+    wishlist: {
+        type: [{type : mongoose.Schema.Types.ObjectId , ref : "courses"}],
+        default: [],
+    },
 },{timestamps : true})
 
 

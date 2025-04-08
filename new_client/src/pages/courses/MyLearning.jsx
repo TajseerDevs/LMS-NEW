@@ -9,13 +9,15 @@ import { CiEdit } from "react-icons/ci"
 import { FaRegClock } from "react-icons/fa"
 import { useNavigate } from 'react-router-dom';
 import NewTicketModal from '../../components/NewTicketModal';
-import { useGetAllUserTicketsQuery } from '../../store/apis/TicketApis';
+import { useAddNewTicketMutation, useGetAllUserTicketsQuery } from '../../store/apis/TicketApis';
 import { useSelector } from 'react-redux';
-import { useGetAllCoursesCompletionPercentagePagingQuery, useGetAllCoursesCompletionPercentageQuery } from '../../store/apis/studentApis';
+import { useGetAllCoursesCompletionPercentagePagingQuery, useGetAllCoursesCompletionPercentageQuery } from '../../store/apis/studentApis'
 import YellowBtn from '../../components/YellowBtn';
 import PurpleBtn from '../../components/PurpleBtn';
 import { FaAngleRight } from "react-icons/fa6";
-
+import formatDate from '../../utils/formatDate';
+import contentSvg from "../../assets/content-svg.svg"
+import techSvg from "../../assets/tech-svg.svg"
   
 
 
@@ -39,7 +41,9 @@ const MyLearning = () => {
 
   const {data : coursesCompletion , isLoading} = useGetAllCoursesCompletionPercentageQuery({token , status : filterMapping[selectedFilter]})
   const {data : coursesCompletionCards , isLoading : isLoadingCompletionCards} = useGetAllCoursesCompletionPercentagePagingQuery({token , page})
-
+  const {data : studentTickets , refetch} = useGetAllUserTicketsQuery({token})
+  
+  console.log(studentTickets)
 
 
   const tickets = [
@@ -89,7 +93,22 @@ const MyLearning = () => {
   }
   
 
-  console.log(coursesCompletionCards)
+  const getPriorityColor = (priority) => {
+    switch (priority) {
+      case "urgent":
+        return "bg-[#FFD7D7] text-[#990000]";
+      case "medium":
+        return "bg-[#60E7FF] text-[#005E8E]";
+      case "low":
+        return "bg-[#D7FFE6] text-[#009912]";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  }
+  
+
+  console.log(studentTickets)
+
 
 
   return (
@@ -342,6 +361,7 @@ const MyLearning = () => {
                   )}
 
                 </>
+                
               )}
                 
               </div>
@@ -352,49 +372,57 @@ const MyLearning = () => {
 
               <div className='flex mb-4 items-center justify-between'>
                   
-                  <h3 onClick={() => navigate("/student-tickets")} className="text-2xl cursor-pointer font-semibold text-[#002147]">Need Help ?</h3>
+                <h3 onClick={() => navigate("/student-tickets")} className="text-2xl cursor-pointer font-semibold text-[#002147]">Need Help ?</h3>
                   
-                  <button onClick={() => setOpenNewTicketModal(true)} className='flex items-center gap-2'>
-                      <CiEdit className='text-[#403685]' size={22}/>
-                      <span className='text-[#403685] font-semibold'>New Ticket</span>
-                  </button>
+                <button onClick={() => setOpenNewTicketModal(true)} className='flex items-center gap-2'>
+                  <CiEdit className='text-[#403685]' size={22}/>
+                  <span className='text-[#403685] font-semibold'>New Ticket</span>
+                </button>
 
               </div>
 
               <div className="space-y-4 p-5 bg-white">
 
-                {tickets.map((ticket) => (
+                {studentTickets?.userTickets?.slice(0 , 3)?.map((ticket) => (
 
-                  <div key={ticket.id} className="bg-gray-100 p-4 rounded-lg shadow flex items-start gap-4">
+                  <div key={ticket?._id} className="bg-gray-100 p-4 rounded-lg shadow flex items-start gap-5">
 
-                    <div className="text-3xl">{ticket.icon}</div>
+                    <div className={`w-10  h-10 flex items-center justify-center rounded-lg ${ticket?.regarding === "technical" ? "bg-[#C4C1D9]" : "bg-[#FFF0BF]"}`}>
+
+                      <img
+                        src={ticket?.regarding === "content" ? contentSvg : techSvg}
+                        alt={ticket?.regarding}
+                        className="w-8 h-8"
+                      />
+
+                    </div>
 
                       <div className="flex-1">
 
                         <div className="flex mb-1 items-center justify-between">
 
-                          <h2 className="font-semibold text-[14px] text-blue-900">{ticket.title}</h2>
-                          <span className="text-gray-400 text-sm">{ticket.status}</span>
+                          <h2 className="font-semibold capitalize text-[14px] text-blue-900">{ticket?.subject}</h2>
+                          <span className="text-gray-400 font-semibold capitalize text-sm">{ticket?.status}</span>
 
                         </div>
 
-                        <p className="text-gray-500 text-[12px] mt-1 whitespace-nowrap overflow-hidden text-ellipsis">
-                          {ticket.description}
+                        <p className="text-gray-500 capitalize text-[12px] mt-1 overflow-hidden text-ellipsis whitespace-nowrap" style={{ maxWidth: '35ch' }}>
+                          {ticket?.details}
                         </p>
 
                         <div className="flex items-center gap-2 mt-2">
 
-                          <span className={`px-3 py-1 text-xs font-medium rounded-full ${ticket.priorityColor}`}>
-                            {ticket.priority}
+                        <span className={`px-3 py-1 text-xs font-medium rounded-full ${getPriorityColor(ticket?.priority)}`}>
+                          {ticket?.priority}
+                        </span>
+
+                          <span className="border capitalize px-3 py-1 text-xs font-medium rounded-full text-gray-700">
+                            #{ticket?.ticketCode}
                           </span>
 
-                          <span className="border px-3 py-1 text-xs font-medium rounded-full text-gray-700">
-                            #MKDO366
-                          </span>
-
-                          <div className="flex items-center text-gray-400 text-sm">
+                          <div className="flex items-center ml-2 text-gray-400 text-[12px]">
                             <FaRegClock className="mr-1" />
-                            {ticket.time}
+                            {formatDate(ticket?.createdAt)}
                           </div>
 
                         </div>
@@ -404,6 +432,10 @@ const MyLearning = () => {
                   </div>
 
               ))}
+
+              <div className='flex items-end justify-end mt-2'>
+                <YellowBtn onClick={() => navigate("/student-tickets")} text="view more"/>
+              </div>
 
           </div>
         
