@@ -68,6 +68,7 @@ const getCourseLatestAssignments = async (req , res , next) => {
   } catch (error) {
     next(error)
   }
+
 }
 
 
@@ -600,69 +601,72 @@ const addMarksToSubmission = async (req , res , next) => {
 
     try {
 
-        const { assignmentId , userId } = req.params
+      const { assignmentId , userId } = req.params
 
-        const { marks , feedback } = req.body
+      const { marks , feedback } = req.body
 
-        const loggedUserId = req.user._id
+      const loggedUserId = req.user._id
+
+      const convertedMark = Number(marks)
     
-        if (!marks) {
-          return next(createError("No marks provided for this submission" , 400))
-        }
+      if (!marks) {
+        return next(createError("No marks provided for this submission" , 400))
+      }
 
-        if (typeof marks !== "number" || marks < 0) {
-          return next(createError("Marks must be a non-negative number" , 400))
-        }
+      if (typeof convertedMark !== "number" || marks < 0) {
+        return next(createError("Marks must be a non-negative number" , 400))
+      }
 
-        const assignment = await Assignment.findById(assignmentId)
+      const assignment = await Assignment.findById(assignmentId)
 
-        if (!assignment) {
-          return next(createError("Assignment not found" , 404))
-        }
+      if (!assignment) {
+        return next(createError("Assignment not found" , 404))
+      }
 
-        if (marks > assignment.mark) {
-          return next(createError("provided marks are bigger than the assigment max mark" , 400))
-        }
+      if (convertedMark > assignment.mark) {
+        return next(createError("provided marks are bigger than the assigment max mark" , 400))
+      }
     
-        const course = await Course.findById(assignment.courseId)
+      const course = await Course.findById(assignment.courseId)
         
-        if (!course) {
-          return next(createError("No Course found for this assignment" , 404))
-        }
+      if (!course) {
+        return next(createError("No Course found for this assignment" , 404))
+      }
 
-        const instructor = await Instructor.findOne({userObjRef : loggedUserId})
+      const instructor = await Instructor.findOne({userObjRef : loggedUserId})
 
-        if (course.instructorId.toString() !== instructor._id.toString() && assignment.createdBy.toString() !== instructor._id.toString() && req.user.role !== "admin") {
-          return next(createError("You are not authorized to view any assigment submissions" , 403))
-        }
+      if (course.instructorId.toString() !== instructor._id.toString() && assignment.createdBy.toString() !== instructor._id.toString() && req.user.role !== "admin") {
+        return next(createError("You are not authorized to view any assigment submissions" , 403))
+      }
 
-        const studentDocObj = await Student.findOne({userObjRef : userId})
+      const studentDocObj = await Student.findOne({userObjRef : userId})
 
-        if (!studentDocObj) {
-          return next(createError(`No Student found with this id ${userId}` , 404))
-        }
+      if (!studentDocObj) {
+        return next(createError(`No Student found with this id ${userId}` , 404))
+      }
 
-        const submission = await Submission.findOne({ assignmentId , studentId : studentDocObj._id })
+      const submission = await Submission.findOne({ assignmentId , studentId : studentDocObj._id })
 
-        if (!submission) {
-          return next(createError("Submission not found for this student" , 404))
-        }
+      if (!submission) {
+        return next(createError("Submission not found for this student" , 404))
+      }
 
-        submission.marks = marks
+      submission.marks = convertedMark
+      submission.isGraded = true
         
-        if (feedback) {
-          submission.feedback = feedback
-        }
+      if (feedback) {
+        submission.feedback = feedback
+      }
 
-        await submission.save()
+      await submission.save()
 
-        res.status(200).json({
-          message: "Marks and feedback updated successfully",
-          submission
-        })
+      res.status(200).json({
+        message: "Marks and feedback updated successfully",
+        submission
+      })
 
     } catch (error) {
-        next(error)   
+      next(error)   
     }
 
 }
@@ -911,14 +915,22 @@ const getAllStudentsSubmissions = async (req , res , next) => {
 
     const populatedSubmissions = await Promise.all(submissionsToFetch.map(async (submissionId) => {
 
-        const submission = await Submission.findById(submissionId)
-          .populate("studentId", "name email")
-          .populate("submissionFile", "originalName filePath fileType uniqueName")
+      const submission = await Submission.findById(submissionId)
+        .populate({
+          path: "studentId",
+          populate: {
+            path: "userObjRef",
+            select: "firstName lastName profilePic"
+          },
+          select: "userObjRef"
+        })
+        .populate("submissionFile", "originalName filePath fileType uniqueName");
 
         const filePath = `/uploads/submissions/${submission.submissionFile.uniqueName}`
 
         return {
           ...submission.toObject(),
+          assignment : assignment.title ,
           submissionFile: {
             ...submission.submissionFile.toObject(),
             filePath ,
@@ -936,6 +948,90 @@ const getAllStudentsSubmissions = async (req , res , next) => {
       submissions: populatedSubmissions,
     })
     
+  } catch (error) {
+    next(error)   
+  }
+
+}
+
+
+
+
+const getAllStudentAssignmentsSubmissions = async (req , res , next) => {
+
+  try {
+    
+    const { courseId , userId } = req.params
+    const loggedUserId = req.user._id
+
+    const page = Number(req.query.page) || 1
+    const limit = 10
+    const skip = (page - 1) * limit
+
+    const instructor = await Instructor.findOne({userObjRef : loggedUserId})
+
+    if(!instructor){
+      return next(createError("instructor not exist" , 404))
+    }
+
+    const course = await Course.findById(courseId)
+
+    if(!course) {
+      return next(createError("Course not found" , 404))
+    }
+
+    const studentDocObj = await Student.findOne({ userObjRef : userId })
+
+    if(!studentDocObj) {
+      return next(createError("student not found" , 404))
+    }
+
+    const assignments = await Assignment.find({courseId , createdBy : instructor._id})
+
+    if (course.instructorId.toString() !== instructor._id.toString() && req.user.role !== "admin") {
+      return next(createError("You are not authorized to view any student assigments submissions" , 403))
+    }
+
+    const hasInvalidAssignments = assignments.some((assignment) => assignment.createdBy.toString() !== instructor._id.toString())
+
+    if (hasInvalidAssignments && req.user.role !== "admin") {
+      return next(createError("You are not authorized to view these assignment submissions" , 403))
+    }
+
+    const assignmentIds = assignments.map(a => a._id)
+
+    const totalSubmissions = await Submission.countDocuments({
+      assignmentId: { $in: assignmentIds },
+      studentId: studentDocObj._id
+    })
+
+    const submissions = await Submission.find({
+      assignmentId: { $in: assignmentIds },
+      studentId: studentDocObj._id
+    })
+      .populate("assignmentId", "title dueDate")
+      .populate("studentId", "userObjRef")
+      .populate("submissionFile", "originalName filePath fileType uniqueName")
+      .skip(skip)
+      .limit(limit)
+      .lean()
+
+
+    const enhancedSubmissions = submissions.map((submission) => ({
+      ...submission,
+      submissionFile: {
+        ...submission.submissionFile ,
+        filepath : `/uploads/submissions/${submission.submissionFile?.uniqueName || ""}` 
+      }
+    }))
+  
+    res.status(200).json({
+      totalSubmissions,
+      currentPage: page,
+      totalPages: Math.ceil(totalSubmissions / limit),
+      submissions : enhancedSubmissions
+    })
+
   } catch (error) {
     next(error)   
   }
@@ -1006,5 +1102,6 @@ module.exports = {
   updateAssignmentSubmission ,
   deleteSubmissionFile ,
   getAllStudentsSubmissions ,
+  getAllStudentAssignmentsSubmissions ,
   getAssignmentDetails
 }

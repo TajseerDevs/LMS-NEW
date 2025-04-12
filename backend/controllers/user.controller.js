@@ -684,6 +684,47 @@ const getAllUsers = async (req , res , next) => {
 
 
 
+const getSingleStudentUser = async (req , res , next) => {
+
+  try {
+    
+    const {userId} = req.params
+
+    const loggedUserId = req.user._id
+
+    const loggedUserObj = await User.findById(loggedUserId)
+
+    if(!loggedUserObj){
+      return next(createError("User not exist" , 404))
+    }
+
+    if(loggedUserObj.role !== "instructor" && loggedUserObj.role !== "admin"){
+      return next(createError("You are not authorized to get student data" , 401))
+    }
+
+    const user = await User.findById(userId).select("firstName lastName")
+
+    if(!user){
+      return next(createError("User not exist" , 404))
+    }
+
+    const studentDocObj = await Student.findOne({userObjRef : userId})
+
+    if(!studentDocObj){
+      return next(createError("Student not exist" , 404))
+    }
+
+    res.status(200).json(user)
+
+  } catch (error) {
+    next(error)    
+  }
+
+}
+
+
+
+
 module.exports = {
   register ,
   login , 
@@ -694,5 +735,6 @@ module.exports = {
   uploadVoice , 
   forgotPassword , 
   resetPassword ,
-  getAllUsers
+  getAllUsers ,
+  getSingleStudentUser
 }

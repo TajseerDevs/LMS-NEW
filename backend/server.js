@@ -200,5 +200,5 @@
 
 
   // how to calculate rate limiting for our server
-  // Total requests = Total Server requests Capacity pre hour ÷ Number of Users.
+  // Total requests = Total Server requests Capacity per hour ÷ Number of Users.
   // 100,000 ÷ 1,000 = 100 requests per hour per user

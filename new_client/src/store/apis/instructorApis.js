@@ -107,6 +107,55 @@ const instructorApi = createApi({
           headers: { Authorization: `Bearer ${token}` } ,
         }),
       }), 
+      getInstructorInsights: builder.query({
+        query: ({token}) => ({
+          url: `/instructor/insights`,
+          method: "GET",
+          headers: { Authorization: `Bearer ${token}` } ,
+        }),
+      }), 
+      getInstructorUngradedSubmissions: builder.query({
+        query: ({token}) => ({
+          url: `/instructor/assignments-submission/insights`,
+          method: "GET",
+          headers: { Authorization: `Bearer ${token}` } ,
+        }),
+      }), 
+      getRandomInstructorCourses: builder.query({
+        query: ({token}) => ({
+          url: `/instructor/random-courses`,
+          method: "GET",
+          headers: { Authorization: `Bearer ${token}` } ,
+        }),
+      }), 
+      getRandomStudentsWithCompletion: builder.query({
+        query: ({token}) => ({
+          url: `/instructor/random-students-completion`,
+          method: "GET",
+          headers: { Authorization: `Bearer ${token}` } ,
+        }),
+      }), 
+      getTwoRandomUngradedSubmissions: builder.query({
+        query: ({token}) => ({
+          url: `/instructor/random-ungraded-submissions`,
+          method: "GET",
+          headers: { Authorization: `Bearer ${token}` } ,
+        }),
+      }), 
+      getCourseStudentDetails : builder.query({
+        query: ({token , courseId , page}) => ({
+          url: `/instructor/course/${courseId}/students/insights?page=${page}`,
+          method: "GET",
+          headers: { Authorization: `Bearer ${token}` } ,
+        }),
+      }), 
+      getSingleStudentUser : builder.query({
+        query: ({token , userId}) => ({
+          url: `/user/single-user/${userId}`,
+          method: "GET",
+          headers: { Authorization: `Bearer ${token}` } ,
+        }),
+      }), 
     }),
   })
 
@@ -123,7 +172,14 @@ const instructorApi = createApi({
     useGetDeclineReasonQuery ,
     useUploadContentFileMutation ,
     useViewCourseStudentsQuery ,
-    useChangeSectionPreviewMutation 
+    useChangeSectionPreviewMutation ,
+    useGetInstructorInsightsQuery ,
+    useGetInstructorUngradedSubmissionsQuery ,
+    useGetRandomInstructorCoursesQuery ,
+    useGetRandomStudentsWithCompletionQuery ,
+    useGetTwoRandomUngradedSubmissionsQuery ,
+    useGetCourseStudentDetailsQuery ,
+    useGetSingleStudentUserQuery
   } = instructorApi
 
 
@@ -139,5 +195,12 @@ const instructorApi = createApi({
     useUploadContentFileMutation ,
     useViewCourseStudentsQuery , 
     useChangeSectionPreviewMutation ,
+    useGetInstructorInsightsQuery ,
+    useGetInstructorUngradedSubmissionsQuery ,
+    useGetRandomInstructorCoursesQuery ,
+    useGetRandomStudentsWithCompletionQuery ,
+    useGetTwoRandomUngradedSubmissionsQuery ,
+    useGetCourseStudentDetailsQuery ,
+    useGetSingleStudentUserQuery ,
     instructorApi ,
   }

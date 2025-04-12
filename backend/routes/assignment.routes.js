@@ -15,7 +15,8 @@ const {
     getCourseLatestAssignments,
     getAssignmentSubmission,
     updateSubmission,
-    checkAssignmentDueDate
+    checkAssignmentDueDate,
+    getAllStudentAssignmentsSubmissions
 } = require("../controllers/assignment.controller")
 
 
@@ -54,6 +55,8 @@ router.put("/:courseId/:assignmentId/update" , protectRoutes , updateAssignmentS
 router.delete("/:assignmentId/delete" , protectRoutes , deleteSubmissionFile)
 
 router.get("/:assignmentId/submissions" , protectRoutes , getAllStudentsSubmissions)
+
+router.get("/student-assignments/:courseId/submissions/:userId" , protectRoutes , getAllStudentAssignmentsSubmissions)
 
 
 

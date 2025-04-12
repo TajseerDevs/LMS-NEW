@@ -145,7 +145,7 @@ const EnrolledCourse = () => {
     const [updateNote] = useUpdateNoteMutation()
     const [deleteNote] = useDeleteNoteMutation()
 
-
+    // ! RTQ , replaced useEffect for getting tabs data , insted only get the non skiped tabs
     const {data : courseLastQuizzes , isLoading : isLoadingLastQuizzes} = useGetCourseLastestQuizzesQuery({token , page : quizTabPage , courseId} , {skip : selectedTab !== "Quiz"})
     const {data : courseLastAssignments} = useGetCourseLatestAssignmentsQuery({token , page : assignmentTabPage , courseId} , {skip : selectedTab !== "Assignment"})
     const {data : courseLastProgress} = useGetCourseLastProgressQuery({token , courseId})

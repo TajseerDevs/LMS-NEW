@@ -473,6 +473,7 @@ const getCourseCompletionPercentage = async (req, res, next) => {
   const { courseId } = req.params
 
   try {
+    
     const course = await Course.findById(courseId).populate(
       "sections.items.attachments"
     )
@@ -481,14 +482,14 @@ const getCourseCompletionPercentage = async (req, res, next) => {
       return next(createError("Course not found", 404))
     }
 
-    const studentUserDoc = await Student.findOne({ userObjRef: req.user._id });
+    const studentUserDoc = await Student.findOne({ userObjRef: req.user._id })
 
     if (!studentUserDoc) {
-      return next(createError("Student not exist", 404));
+      return next(createError("Student not exist", 404))
     }
 
     if (!course.studentsEnrolled.includes(studentUserDoc._id)) {
-      return next(createError("User is not enrolled in this course", 400));
+      return next(createError("User is not enrolled in this course", 400))
     }
 
     const userLogs = await Lesson.find({

@@ -4,6 +4,12 @@ import { IoSaveSharp } from "react-icons/io5"
 import { MdOutlineCancel } from "react-icons/md"
 import YellowBtn from "../../components/YellowBtn"
 import purpleAssigment from "../../assets/purple-assigment.svg"
+import { useParams } from "react-router-dom"
+import { useSelector } from "react-redux"
+import { useGetCourseByIdQuery } from "../../store/apis/courseApis"
+import { useGetSingleStudentUserQuery } from "../../store/apis/instructorApis"
+import { useAddMarksToSubmissionMutation, useGetAllStudentAssignmentsSubmissionsQuery } from "../../store/apis/assigmentApis"
+import formatDate from "../../utils/formatDate"
 
 
 const initialAssignmentsSubmissions = [
@@ -14,51 +20,61 @@ const initialAssignmentsSubmissions = [
 ]
 
 
+const BASE_URL = "http://10.10.30.40:5500"
+
 
 const StudentAssigmentsSubmissions = () => {
 
-  const [assignments, setAssignments] = useState(initialAssignmentsSubmissions)
-  const [editingId, setEditingId] = useState(null)
-  const [tempMark, setTempMark] = useState({})
-  const [search, setSearch] = useState("")
-  const [selectedFilter, setSelectedFilter] = useState("")
+  const { studentId , courseId } = useParams()
+
+  const {token} = useSelector((state) => state.user)
+
   const [page , setPage] = useState(1)
+
+  const {data : course } = useGetCourseByIdQuery({token , courseId})
+  const {data : student} = useGetSingleStudentUserQuery({token , userId : studentId})  
+  const {data : studentAssignmentsSubmissions , refetch} = useGetAllStudentAssignmentsSubmissionsQuery({token , userId : studentId , courseId , page})  
+
+  const [assignMarkToSubmission , {isLoading : isLoadingAddMark}] = useAddMarksToSubmissionMutation()
+  
+
+  const [editingId, setEditingId] = useState(null)
+  const [tempMark, setTempMark] = useState(0)
+
+  const [search , setSearch] = useState("")
+  const [selectedFilter , setSelectedFilter] = useState("")
 
 
   const handleSearchChange = (e) => {
     setSearch(e.target.value)
   }
 
-  const handleEdit = (id, currentMark) => {
-    setEditingId(id)
-    setTempMark({ ...tempMark , [id]: currentMark }) 
+
+  const handleEdit = (submissionId) => {
+    setEditingId(submissionId)
   }
 
 
-  const handleSaveMark = (id) => {
-    setAssignments(assignments.map(item =>
-      item.id === id ? { ...item, mark: tempMark[id] } : item
-    ))
-    setEditingId(null)
+  const handleSaveMark = async (assignmentId) => {
+
+    try {
+      await assignMarkToSubmission({token , assignmentId , userId : student?._id , marks : tempMark , feedback : tempMark > 5 ? "Very Good" : "Not Bad"}).unwrap()
+      await refetch()
+    } catch (error) {
+      console.log(error)
+    }finally{
+      setEditingId(null)
+      setTempMark(0)
+    }
+
   }
 
 
   const handleCancelEdit = () => {
     setEditingId(null)
-    setTempMark({})
+    setTempMark(0)
   }
 
-
-  const filteredAssignments = assignments.filter((item) => {
-    const matchesSearch = item.name.toLowerCase().includes(search);
-    const matchesFilter =
-      selectedFilter === "all" || 
-      selectedFilter === "" || 
-      (selectedFilter === "yes" && item.submitted) ||
-      (selectedFilter === "no" && !item.submitted);
-  
-    return matchesSearch && matchesFilter;
-  })
 
 
   const handlePrev = () => {
@@ -69,10 +85,30 @@ const StudentAssigmentsSubmissions = () => {
 
 
   const handleNext = () => {
-    // if (assigments && page < assigments.totalPages) {
-    //   setPage(prevPage => prevPage + 1)
-    // }
+    if (data?.totalPages && page < studentAssignmentsSubmissions?.totalPages) {
+      setPage(prevPage => prevPage + 1)
+    }
   }
+
+
+
+  const filteredSubmissions = studentAssignmentsSubmissions?.submissions?.filter((submission) => {
+    
+    const fullName = `${submission?.studentId?.userObjRef?.firstName} ${submission?.studentId?.userObjRef?.lastName}`.toLowerCase()
+    const matchesSearch = fullName.includes(search.toLowerCase())
+  
+    const isSubmitted = submission?.isGraded
+  
+    if (selectedFilter === "yes") {
+      return isSubmitted && matchesSearch
+    } else if (selectedFilter === "no") {
+      return !isSubmitted && matchesSearch
+    } else {
+      return matchesSearch 
+    }
+
+  })
+
 
 
   return (
@@ -80,7 +116,7 @@ const StudentAssigmentsSubmissions = () => {
     <div className="p-10">
 
       <h2 className="text-2xl font-semibold">
-        <h1 className='text-3xl mb-10 capitalize font-semibold text-[#002147]'>Student Progress  <span className="text-[#797979]">/ Course Name / Student name / Assignments  </span> </h1>
+        <h1 className='text-3xl mb-10 capitalize font-semibold text-[#002147]'>Student Progress  <span className="text-[#797979]">/ {course?.title} / {student?.firstName} {student?.lastName} / Assignments  </span> </h1>
       </h2>
 
       <div className="flex items-center justify-between mt-8 mb-8 w-[75%]">
@@ -114,7 +150,7 @@ const StudentAssigmentsSubmissions = () => {
 
           <thead>
 
-            <tr className="border-b-2 text-[#101018] h-[70px] ">
+            <tr className="border-b-2 text-[#101018] h-[70px]">  
 
               <th className="p-4 text-left">Assignment Name</th>
               <th className="p-4">Submitted Assignment</th>
@@ -129,9 +165,9 @@ const StudentAssigmentsSubmissions = () => {
 
           <tbody>
 
-            {filteredAssignments.map((item) => (
+            {filteredSubmissions?.map((submission) => (
 
-              <tr key={item.id} className="text-center h-[70px] border-b-2">
+              <tr key={submission?._id} className="text-center h-[70px] border-b-2">
 
                 <td className="p-4 flex items-center space-x-4">
 
@@ -142,33 +178,33 @@ const StudentAssigmentsSubmissions = () => {
                   />
 
                   <div>
-                    <p className="font-semibold capitalize">{item.name}</p>
-                    <p className="text-gray-500 text-left ml-1 text-sm">{item.studentId}</p>
+                    <p className="font-semibold capitalize">{submission?.assignmentId?.title}</p>
+                    <p className="text-gray-500 text-left ml-1 text-sm">{student?._id?.slice(0 , 9)}</p>
                   </div>
 
                 </td>
 
-                <td className="p-4">{item.submitted ? "Yes" : "No"}</td>
-                <td className="p-4">{item.date}</td>
+                <td className="p-4">{submission?.submissionFile?.filePath !== "" ? "Yes" : "No"}</td>
+                <td className="p-4">{formatDate(submission?.submittedAt)}</td>
 
                 <td className="p-4">
 
-                  {item.file !== "No Submission file" ? (
-                    <a href="#" className="text-blue-500 underline">{item.file}</a>
+                  {!submission?.submissionFile !== "No Submission file" ? (
+                    <a href={`${BASE_URL}${submission?.submissionFile?.filepath}`} className="text-blue-500 underline">{submission?.submissionFile?.originalName}</a>
                   ) : "No Submission"}
 
                 </td>
 
                 <td className="p-4">
 
-                  {editingId === item.id ? (
+                {editingId === submission?._id ? (
 
                     <div className="">
 
                       <input
                         type="number"
-                        value={tempMark[item.id]}
-                        onChange={(e) => setTempMark({ ...tempMark , [item.id]: e.target.value })}
+                        value={tempMark || 0}
+                        onChange={(e) => setTempMark(e.target.value)}
                         className="border p-1 w-16 text-center"
                         min={0}
                         max={100}
@@ -178,7 +214,7 @@ const StudentAssigmentsSubmissions = () => {
 
                   ) : (
 
-                    <span>{item.mark !== null ? item.mark : "-"}</span>
+                    <span>{submission?.marks !== null ? submission?.marks : "-"}</span>
 
                   )}
 
@@ -186,11 +222,11 @@ const StudentAssigmentsSubmissions = () => {
 
                 <td className="p-4 space-x-4">
 
-                  {editingId === item.id ? (
+                  {editingId === submission?._id ? (
 
                     <>
 
-                      <button onClick={() => handleSaveMark(item.id)} className="text-[#403685]">
+                      <button onClick={() => handleSaveMark(submission?.assignmentId?._id)} className="text-[#403685]">
                         <IoSaveSharp size={26} />
                       </button>
 
@@ -202,7 +238,7 @@ const StudentAssigmentsSubmissions = () => {
 
                   ) : (
 
-                    <button onClick={() => handleEdit(item.id, item.mark)} className="text-[#403685] font-semibold underline">
+                    <button onClick={() => handleEdit(submission?._id)} className="text-[#403685] font-semibold underline">
                       Add mark +
                     </button>
 
@@ -223,11 +259,11 @@ const StudentAssigmentsSubmissions = () => {
       
       <div className="mt-10 flex justify-end w-[90%] items-center gap-2">
 
-        <YellowBtn text="Prev" disabled={page <= 1} onClick={handlePrev} />
+        <YellowBtn text="Previous" disabled={page <= 1} onClick={handlePrev} />
 
-        <span className="mx-4 text-lg font-semibold">page {page}</span>
+        <span className="mx-4 text-lg font-semibold">Page {page} of {studentAssignmentsSubmissions?.totalPages}</span>
 
-        <YellowBtn text="Next" disabled={page >= 1} onClick={handleNext} />
+        <YellowBtn text="Next" disabled={page >= studentAssignmentsSubmissions?.totalPages} onClick={handleNext} />
 
       </div>
 

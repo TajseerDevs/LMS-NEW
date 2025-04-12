@@ -16,11 +16,32 @@ const {
      uploadContentFile,
      getCourseStudentLogs,
      changeSectionPreview,
-     getAllInstructorCoursesNoPaging
+     getAllInstructorCoursesNoPaging,
+     getInstructorInsights,
+     getInstructorUngradedSubmissions,
+     getRandomInstructorCourses,
+     getRandomStudentsWithCompletion,
+     getTwoRandomUngradedSubmissions,
+     getCourseStudentDetails
 } = require("../controllers/instructor.controller")
 
 
 const router = express.Router()
+
+
+router.get('/insights' , protectRoutes , getInstructorInsights)
+
+router.get('/assignments-submission/insights' , protectRoutes , getInstructorUngradedSubmissions)
+
+router.get('/random-courses' , protectRoutes , getRandomInstructorCourses)
+
+router.get('/random-students-completion' , protectRoutes , getRandomStudentsWithCompletion)
+
+router.get("/random-ungraded-submissions" , protectRoutes , getTwoRandomUngradedSubmissions)
+
+
+router.get('/course/:courseId/students/insights' , protectRoutes , getCourseStudentDetails)
+
 
 
 router.post("/create-course" , protectRoutes , createCourse)

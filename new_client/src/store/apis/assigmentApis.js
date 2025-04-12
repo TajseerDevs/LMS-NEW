@@ -65,6 +65,28 @@ const assigmentApi = createApi({
         headers: { Authorization: `Bearer ${token}` },
       }),
     }),
+    getAllStudentsSubmissions : builder.query({
+      query: ({ token , assignmentId , page }) => ({
+        url: `/${assignmentId}/submissions?page=${page}`,
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    }),
+    getAllStudentAssignmentsSubmissions : builder.query({
+      query: ({ token , courseId , userId , page }) => ({
+        url: `/student-assignments/${courseId}/submissions/${userId}?page=${page}`,
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    }),
+    addMarksToSubmission : builder.mutation({
+      query: ({ token , assignmentId , userId , marks , feedback }) => ({
+        url: `/${assignmentId}/submissions/${userId}/marks`,
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}` },
+        body : { marks , feedback }
+      }),
+    }),
   }),
 })
 
@@ -78,7 +100,10 @@ const {
   useGetAssignmentDetailsQuery,
   useSubmitAssignmentSubmissionMutation ,
   useGetAssignmentSubmissionQuery ,
-  useUpdateSubmissionMutation
+  useUpdateSubmissionMutation ,
+  useGetAllStudentsSubmissionsQuery ,
+  useGetAllStudentAssignmentsSubmissionsQuery ,
+  useAddMarksToSubmissionMutation
 } = assigmentApi
 
 
@@ -92,5 +117,8 @@ export {
   useSubmitAssignmentSubmissionMutation ,
   useGetAssignmentSubmissionQuery ,
   useUpdateSubmissionMutation ,
+  useGetAllStudentsSubmissionsQuery ,
+  useGetAllStudentAssignmentsSubmissionsQuery ,
+  useAddMarksToSubmissionMutation ,
   assigmentApi,
 }

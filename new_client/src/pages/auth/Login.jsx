@@ -20,7 +20,7 @@ const Login = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
-  const [login , {isLoading , isError}] = useLoginUserMutation()
+  const [login , {isLoading , isError ,  error}] = useLoginUserMutation()
   
   const handlePassState = (e) => {
     if (e.target.classList.length) {
@@ -32,7 +32,7 @@ const Login = () => {
     }
   };
 
-
+  console.log(error)
   
   const handleSubmit = async (e) => {
 
@@ -47,6 +47,10 @@ const Login = () => {
       console.log(error)
     }
 
+  }
+
+  if(isLoading){
+    return <h1>Loading ...</h1>
   }
 
 

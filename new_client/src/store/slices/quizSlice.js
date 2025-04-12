@@ -12,7 +12,7 @@ const initialState = {
   dueDate: "",
   passScore : 0 ,
   shuffledQuestions : false ,
-  isOneWay : false ,
+  isOneWay : false , // it will be removed (not used)
 };
 
 const persistedState = JSON.parse(localStorage.getItem("quizData")) || initialState

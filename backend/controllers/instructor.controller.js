@@ -16,6 +16,375 @@ const Category = require("../models/Category")
 const File = require("../models/File")
 const User = require("../models/User")
 const Lesson = require("../models/ScormLogSchema")
+const Assignment = require("../models/Assigment")
+const Submission = require("../models/Submission")
+const QuizResult = require("../models/QuizResult")
+const Quiz = require("../models/Quiz")
+
+
+
+
+const getInstructorInsights = async (req , res , next) => {
+
+  try {
+    
+    const userId = req.user._id
+
+    const instructor = await Instructor.findOne({userObjRef : userId})
+
+    if (!instructor) return next(createError("Instructor not found", 404))
+
+    const studentDoc = await Student.findOne({ userObjRef: userId })
+
+    const studentIdToExclude = studentDoc?._id?.toString()
+
+    const courses = await Course.find({ instructorId : instructor._id }).select('studentsEnrolled')
+
+    const numberOfCourses = courses.length
+    let totalEnrolledStudents = 0
+
+    courses.forEach(course => {
+      
+      const filteredStudents = course.studentsEnrolled.filter(
+        studentId => studentId.toString() !== studentIdToExclude
+      )
+
+      totalEnrolledStudents += filteredStudents.length
+    
+    })
+
+    res.status(200).json({
+      numberOfCourses,
+      totalEnrolledStudents,
+    })
+
+  } catch (error) {
+    next(error)    
+  }
+
+}
+
+
+
+
+const getInstructorUngradedSubmissions = async (req , res , next) => {
+
+  try {
+    
+    const userId = req.user._id
+
+    const instructor = await Instructor.findOne({ userObjRef: userId })
+    
+    if (!instructor) return next(createError("Instructor not found", 404))
+
+    const assignments = await Assignment.find({ createdBy : instructor._id })
+
+    let totalUngradedSubmissions = 0
+
+    const result = await Promise.all(assignments.map(async (assignment) => {
+      const ungradedCount = await Submission.countDocuments({
+        assignmentId: assignment._id ,
+        isGraded: false
+    })
+
+      totalUngradedSubmissions += ungradedCount
+
+      return {
+        assignmentId: assignment._id,
+        title: assignment.title,
+        ungradedSubmissions: ungradedCount
+      }
+
+    }))
+
+    res.status(200).json({
+      totalUngradedSubmissions
+    })
+
+  } catch (error) {
+    next(error)        
+  }
+
+}
+
+
+
+
+const getRandomInstructorCourses = async (req , res , next) => {
+
+  try {
+    
+    const userId = req.user._id
+
+    const instructor = await Instructor.findOne({ userObjRef: userId })
+    
+    if (!instructor) return next(new Error("Instructor not found"))
+
+    const randomCourses = await Course.aggregate([
+      { $match: { instructorId: instructor._id } },
+      { $sample: { size: 2 } }
+    ])
+
+    res.status(200).json({
+      courses: randomCourses
+    })
+  
+  } catch (error) {
+    next(error)        
+  }
+
+}
+
+
+
+
+const getRandomStudentsWithCompletion = async (req , res , next) => {
+
+  try {
+    
+    const userId = req.user._id
+
+    const instructor = await Instructor.findOne({userObjRef : userId})
+
+    if (!instructor) return next(new Error("Instructor not found"))
+
+    const instructorStudentDoc = await Student.findOne({userObjRef : userId})
+
+    const instructorCourses = await Course.find({ instructorId : instructor._id })
+      .populate({
+        path: 'studentsEnrolled',
+        populate: {
+          path: 'userObjRef',
+          select: 'firstName lastName',
+        },
+      })
+      .populate('sections.items.attachments')
+
+
+    if (instructorCourses.length === 0) {
+      return res.status(200).json({ courses : [] })
+    }
+
+
+    const studentsCourses = []
+
+    for (const course of instructorCourses) {
+    
+      const eligibleStudents = course.studentsEnrolled.filter(
+        (student) => student._id.toString() !== instructorStudentDoc._id.toString()
+      )
+
+      if (eligibleStudents.length === 0) continue
+
+      const randomStudent = eligibleStudents[Math.floor(Math.random() * eligibleStudents.length)]
+      
+      const userLogs = await Lesson.find({
+        courseId: course._id,
+        userId: randomStudent._id,
+        lesson_status: { $in: ["completed", "passed"] },
+      }).select("attachement")
+      
+      const completedAttachmentIds = userLogs.map(l => l.attachement.toString())
+
+      let totalAttachments = 0
+      let completedAttachments = 0
+
+      course.sections.forEach(section => {
+        section.items.forEach(item => {
+          totalAttachments += item.attachments.length;
+          completedAttachments += item.attachments.filter(att =>
+            completedAttachmentIds.includes(att._id.toString())
+          ).length
+        })
+      })
+
+      const percentage = totalAttachments > 0 ? Math.round((completedAttachments / totalAttachments) * 100) : 0
+
+      const randomValue = Math.floor(Math.random() * course.studentsEnrolled.length)
+
+      studentsCourses.push({
+        courseName: course.title,
+        studentName: `${randomStudent.userObjRef.firstName} ${randomStudent.userObjRef.lastName}`,
+        completionPercentage: percentage,
+        courseId : course._id
+      })
+
+      if (studentsCourses.length === 3) break;
+
+    }
+    
+    res.status(200).json({ studentsCourses })
+
+  } catch (error) {
+    next(error)
+  }
+
+}
+
+
+
+
+const getTwoRandomUngradedSubmissions = async (req , res , next) => {
+
+  try {
+    
+    const userId = req.user._id
+
+    const instructor = await Instructor.findOne({userObjRef : userId})
+
+    if (!instructor) return next(new Error("Instructor not found"))
+
+    const instructorAssignments = await Assignment.find({ createdBy : instructor._id }).select("_id")
+
+    const assignmentIds = instructorAssignments.map(assignment => assignment._id)
+
+    if (assignmentIds.length === 0) {
+      return res.status(200).json({ notGradedAssignments : [] })
+    }
+
+    const ungradedSubmissions = await Submission.find({
+      isGraded: false,
+      assignmentId: { $in: assignmentIds }
+    })
+    .populate({
+      path: "assignmentId",
+      populate: {
+        path: "courseId",
+        select: "title"
+      },
+      select: "title courseId dueDate"
+    })
+    .populate({
+      path: "studentId",
+      populate: {
+        path: "userObjRef",
+        select: "firstName lastName"
+      },
+      select: "userObjRef"
+    })
+
+    // if (ungradedSubmissions.length === 0) {
+    //   return res.status(200).json({ data: [] })
+    // }
+
+    const shuffled = ungradedSubmissions.sort(() => 0.5 - Math.random())
+    const selected = shuffled.slice(0 , 2)
+
+    const result = selected.map(sub => ({
+      courseName: sub.assignmentId.courseId.title,
+      assignmentTitle: sub.assignmentId.title,
+      studentName: `${sub.studentId.userObjRef.firstName} ${sub.studentId.userObjRef.lastName}` ,
+      dueDate: sub.assignmentId.dueDate,
+    }))
+
+    res.status(200).json(result)
+
+  } catch (error) {
+    next(error)    
+  }
+
+}
+
+
+
+
+const getCourseStudentDetails = async (req, res, next) => {
+
+  try {
+
+    const { courseId } = req.params
+
+    const page = parseInt(req.query.page) || 1
+    const limit = 10
+    const skip = (page - 1) * limit
+
+    const course = await Course.findById(courseId)
+
+    if (!course) {
+      return res.status(404).json({ message: "Course not found" })
+    }
+
+    const instructor = await Instructor.findOne({ userObjRef: req.user._id })
+
+    if (!instructor) {
+      return res.status(404).json({ message: "Instructor not found" })
+    }
+
+    const instructorStudentDoc = await Student.findOne({ userObjRef: req.user._id })
+
+    const students = await Student.find({ _id: { $in: course.studentsEnrolled } })
+      .populate('userObjRef', 'firstName lastName profilePic')
+
+    const filteredStudents = students.filter(student => student._id.toString() !== instructorStudentDoc._id.toString())
+
+    const totalStudents = filteredStudents.length
+    const pagedStudents = filteredStudents.slice(skip, skip + limit)
+
+    const results = await Promise.all(pagedStudents.map(async (student) => {
+
+      const assignments = await Assignment.find({ courseId, createdBy: instructor._id })
+
+      const submissions = await Submission.find({
+        assignmentId: { $in: assignments.map(a => a._id) },
+        studentId: student._id
+      })
+
+      const quizzes = await Quiz.find({ courseId, instructorId: instructor._id })
+
+      const quizResults = await QuizResult.find({
+        studentId: student._id,
+        courseId: courseId,
+        quizId: { $in: quizzes.map(q => q._id) }
+      })
+
+      const totalQuizMarks = quizResults.reduce((acc, qr) => acc + qr.totalScore, 0)
+      const totalMaxQuizMarks = quizzes.reduce((acc, quiz) => acc + (quiz.maxScore || 0), 0)
+
+      const assignmentPoints = submissions.length
+      const maxAssignmentPoints = assignments.length
+
+      const quizPoints = totalQuizMarks
+      const maxQuizPoints = totalMaxQuizMarks
+
+      const totalEarned = assignmentPoints + quizPoints
+      const totalPossible = maxAssignmentPoints + maxQuizPoints
+
+      const totalCorrect = quizResults.reduce((acc, q) => acc + q.correctAnswersCount, 0)
+      
+      const totalQuestions = quizResults.reduce((acc, q) =>
+        acc + q.correctAnswersCount + q.partiallyCorrectAnswersCount + q.incorrectAnswersCount,
+        0
+      )
+
+      const correctPercentage = totalQuestions > 0 ? ((totalCorrect / totalQuestions) * 100).toFixed(2) + '%' : "0%"
+
+      return {
+        fullName: `${student.userObjRef.firstName} ${student.userObjRef.lastName}`,
+        studentId: student.userObjRef._id ,
+        profilePic: student.userObjRef.profilePic,
+        totalAssignments: assignments.length,
+        totalSubmittedAssignments: submissions.length,
+        totalQuizMarks,
+        totalMaxQuizMarks ,
+        overallScore: `${totalEarned} / ${totalPossible}` ,
+        question: correctPercentage
+      }
+
+    }))
+
+    res.status(200).json({
+      students: results,
+      totalStudents,
+      currentPage: page,
+      totalPages: Math.ceil(totalStudents / limit)
+    })
+
+  } catch (error) {
+    next(error)
+  }
+
+}
+
 
 
 
@@ -815,7 +1184,7 @@ const uploadScormFile = async (req, res, next) => {
 
 
 
-  const uploadContentFile = async (req, res, next) => {
+const uploadContentFile = async (req, res, next) => {
   
     try {
     
@@ -956,7 +1325,7 @@ const uploadScormFile = async (req, res, next) => {
       next(error)
     }
 
-  }
+}
   
   
 
@@ -1092,7 +1461,7 @@ const getInstructorContentTickets = async (req, res, next) => {
 
 
 
-  const getDeclineReason = async (req , res , next) => {
+const getDeclineReason = async (req , res , next) => {
 
     const {courseId} = req.params
 
@@ -1130,7 +1499,7 @@ const getInstructorContentTickets = async (req, res, next) => {
 
 
 
-  const getCourseStudentLogs = async (req , res , next) => {
+const getCourseStudentLogs = async (req , res , next) => {
 
     try {
       
@@ -1168,7 +1537,7 @@ const getInstructorContentTickets = async (req, res, next) => {
       next(error)
     }
 
-  }
+}
   
 
 
@@ -1176,10 +1545,16 @@ const getInstructorContentTickets = async (req, res, next) => {
 
 
 module.exports = {
-  createCourse , 
-  getAllInstructorCourses , 
-  getAllInstructorCoursesNoPaging ,
-  viewCourseStudents , 
+    getInstructorInsights ,
+    getInstructorUngradedSubmissions ,
+    getRandomInstructorCourses ,
+    getRandomStudentsWithCompletion ,
+    getTwoRandomUngradedSubmissions ,
+    getCourseStudentDetails ,
+    createCourse , 
+    getAllInstructorCourses , 
+    getAllInstructorCoursesNoPaging ,
+    viewCourseStudents , 
     deleteCourse ,
     addSectionToCourse ,
     addItemToSection ,

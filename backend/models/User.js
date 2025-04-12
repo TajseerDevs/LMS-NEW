@@ -121,16 +121,6 @@ userSchema.pre("save" , async function(next){
 })
 
 
-userSchema.pre("deleteOne" , async function(next){
-
-    const lists = await Listing.deleteMany({userRef : this._id})
-
-    
-
-    next()
- 
-})
-
 
 
 userSchema.methods.getResetPasswordToken = function(){

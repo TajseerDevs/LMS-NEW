@@ -351,7 +351,7 @@ const MyLearning = () => {
                         <div>
                           {course?.progress === "0%" && <YellowBtn icon={HiChevronRight} text="Start" />}
                           {course?.progress > "0%" && course?.progress < "100%" && <YellowBtn icon={HiChevronRight} text="Continue" />}
-                          {course?.progress === "100%" && <YellowBtn icon={HiChevronRight} text="Get Certificate" />}
+                          {course?.progress === "100%" && <YellowBtn onClick={() => navigate("/certificate")} icon={HiChevronRight} text="Get Certificate" />}
                         </div>
 
                       </div>

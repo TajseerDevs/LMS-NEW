@@ -1,9 +1,23 @@
 const express = require("express");
-const { register, login , updateProfile , getLoggedUser, uploadProfileImg, uploadDocuments, uploadVoice, forgotPassword, resetPassword, newRegister, getAllUsers} = require("../controllers/user.controller");
-const { protectRoutes } = require("../middlewares/auth");
+const { protectRoutes } = require("../middlewares/auth")
+
+const { 
+    register, 
+    login , 
+    updateProfile , 
+    getLoggedUser, 
+    uploadProfileImg, 
+    uploadDocuments, 
+    uploadVoice, 
+    forgotPassword, 
+    resetPassword, 
+    getAllUsers, 
+    getSingleStudentUser
+} = require("../controllers/user.controller")
 
 
-const router = express.Router();
+
+const router = express.Router()
 
 
 router.post("/register" , register)
@@ -26,6 +40,8 @@ router.post("/reset-password", resetPassword)
 
 router.get("/all-users" , protectRoutes , getAllUsers)
 
+router.get("/single-user/:userId" , protectRoutes , getSingleStudentUser)
 
 
-module.exports = router;
+
+module.exports = router

@@ -217,7 +217,7 @@ function App() {
               <Route path="course/enrolled-students/:courseId" element={<CourseEnrolledStudnets />} />
 
               <Route path="course/enrolled-students-progress/:courseId" element={<CourseEnrolledStudnetsInsights />} /> 
-              <Route path="course/student-quizzes-progress/:courseId/:quizId/:studentId" element={<CourseEnrolledStudnetQuizzesProgress />} /> 
+              <Route path="course/student-quizzes-progress/:courseId/:studentId" element={<CourseEnrolledStudnetQuizzesProgress />} /> 
 
               <Route path="quizzes" element={<Quizzes />} /> 
               <Route path="create-quiz" element={<CreateQuiz />} /> 
@@ -226,7 +226,7 @@ function App() {
               <Route path="assigments" element={<Assigments />} />  
               <Route path="course/assigments/:courseId" element={<CourseAssigments />} />  
 
-              <Route path="assigment/:assigmentId/:courseId" element={<AssigmentSubmissions />} />  
+              <Route path="assigment/:assignmentId/:courseId" element={<AssigmentSubmissions />} />  
               
               <Route path="assigment/:studentId/:courseId/student" element={<StudentAssigmentsSubmissions />} />  
 
