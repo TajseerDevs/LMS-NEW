@@ -83,7 +83,7 @@ const userSchema = new mongoose.Schema({
     },
     lastLogin : {
         type: Date,
-        required: true,
+        required: false,
     },
     cartItems: {
         type: Array,

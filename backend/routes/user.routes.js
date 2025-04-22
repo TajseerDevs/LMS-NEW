@@ -12,7 +12,8 @@ const {
     forgotPassword, 
     resetPassword, 
     getAllUsers, 
-    getSingleStudentUser
+    getSingleStudentUser,
+    deleteProfileImg
 } = require("../controllers/user.controller")
 
 
@@ -29,6 +30,8 @@ router.patch("/update-profile" , protectRoutes , updateProfile)
 router.get("/", protectRoutes, getLoggedUser)
 
 router.patch("/upload-profile-pic" , protectRoutes , uploadProfileImg)
+
+router.delete("/delete-profile-pic" , protectRoutes , deleteProfileImg)
 
 router.post("/upload-documents" , protectRoutes , uploadDocuments)
 

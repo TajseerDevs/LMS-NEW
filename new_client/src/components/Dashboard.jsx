@@ -30,7 +30,7 @@ const Dashboard = () => {
 
   const {data : studentEnrolledCourses , isError , isLoading} = useGetAllStudentCoursesQuery({token})
   const {data : studentAttendanceAvg } = useCalculateStudentAttendanceQuery({token})
-  const {data : studentLessonsProgress } = useGetAvgLessonsProgressQuery({token})
+  const {data : studentLessonsProgress } = useGetAvgLessonsProgressQuery({token}) // NEEDS UPDATE
   const {data : studentCoursesProgress } = useGetStudentProgressQuery({token})
   const {data : studentNotEnrolledCourses , refetch : refetchStudentNotEnrolledCourses } = useGetNotEnrolledCoursesQuery({token})
   const {data : suggestedTopCourses} = useGetAllCoursesQuery({token , page}) // replace with most popular courses api when there is a courses data

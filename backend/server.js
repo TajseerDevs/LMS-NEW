@@ -46,9 +46,9 @@
     app.use(express.json())
 
     app.use((req, res, next) => {
-      res.setHeader("Content-Security-Policy", "frame-ancestors 'self' http://10.10.30.40:3000");
-      res.setHeader("X-Frame-Options", "ALLOW-FROM http://10.10.30.40:3000");
-      next();
+      res.setHeader("Content-Security-Policy", "frame-ancestors 'self' http://10.10.30.40:3000")
+      res.setHeader("X-Frame-Options", "ALLOW-FROM http://10.10.30.40:3000")
+      next()
     })
   
     app.use(cors())

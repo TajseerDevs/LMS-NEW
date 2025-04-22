@@ -38,6 +38,25 @@ const authApi = createApi({
         };
       },
     }),
+    uploadProfileImage: builder.mutation({
+      query: ({ token, formData }) => ({
+        url: "/upload-profile-pic",
+        method: "PATCH",
+        body: formData,
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }),
+    }),
+    deleteProfileImg: builder.mutation({
+      query: ({ token }) => ({
+        url: "/delete-profile-pic",
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }),
+    }),
   }),
 })
 
@@ -47,7 +66,9 @@ const {
   useLoginUserMutation,
   useRegisterUserMutation ,
   useGetUserMutation ,
-  useGetAllUsersQuery
+  useGetAllUsersQuery ,
+  useUploadProfileImageMutation ,
+  useDeleteProfileImgMutation
 } = authApi
 
 
@@ -57,5 +78,7 @@ export {
   useRegisterUserMutation,
   useGetUserMutation ,
   useGetAllUsersQuery ,
+  useUploadProfileImageMutation ,
+  useDeleteProfileImgMutation ,
   authApi,
 }

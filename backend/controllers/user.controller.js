@@ -427,6 +427,45 @@ const uploadProfileImg = async (req , res , next) => {
 
 
 
+const deleteProfileImg = async (req , res , next) => {
+
+  try {
+    
+    const userId = req.user._id;
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return next(createError("User not found", 404))
+    }
+    
+    if (!user.profilePic) {
+      return next(createError("No profile image to delete", 400))
+    }
+
+    const oldImagePath = path.join(__dirname , ".." , user.profilePic)
+
+    if (fs.existsSync(oldImagePath)) {
+      fs.unlinkSync(oldImagePath)
+    }
+
+    user.profilePic = null
+    await user.save()
+
+    res.status(200).json({
+      message: "Profile image deleted successfully",
+      profilePic: null,
+    })
+
+  } catch (error) {
+    next(error)
+  }
+
+}
+
+
+
+
 const uploadDocuments = async (req , res , next) => {
 
   try {
@@ -731,6 +770,7 @@ module.exports = {
   updateProfile , 
   getLoggedUser , 
   uploadProfileImg , 
+  deleteProfileImg ,
   uploadDocuments , 
   uploadVoice , 
   forgotPassword , 

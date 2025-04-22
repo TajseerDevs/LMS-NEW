@@ -21,7 +21,7 @@ const getMyStudents = async (req , res , next) => {
             return next(createError("Parent not exist" , 404))
         }
 
-        const students = await Student.find({ parentId : parent._id })
+        const students = await Student.find({ parentId : parent._id }).populate("userObjRef")
 
         res.status(200).json(students)
 
@@ -164,12 +164,17 @@ const assignStudentsToParent = async (req , res , next) => {
                 Joi.object({
                   studentId: Joi.string().required(),
                   fullName: Joi.string().required(),
-                  relation: Joi.string().valid("father", "mother", "guardian").required(),
-                  gradeLevel: Joi.string().valid("K-12", "university", "training").required(),
+                  educationLevel: Joi.string().valid("K-12", "university", "training").required(),
+                  specialNeeds: Joi.boolean().default(false),
+                  relation: Joi.object({
+                    role: Joi.string().valid("father", "mother", "guardian").required(),
+                    emergencyNumber: Joi.string().pattern(/^\+[0-9]+$/).required(),
+                    emergencyEmail: Joi.string().email().required()
+                  }).required()
                 })
-              )
-              .required(),
-          })
+            )
+            .required(),
+        })
 
         const { error , value } = assignStudentsSchema.validate(req.body , {abortEarly : false})
 
@@ -181,21 +186,33 @@ const assignStudentsToParent = async (req , res , next) => {
           
         const studentsEnrolled = await Promise.all(students.map(async (studentData) => {
 
-            const student = await Student.findById(studentData.studentId)
+            const studentUserObj = await User.findById(studentData.studentId)
+            
+            const student = await Student.findOne({userObjRef : studentUserObj._id})
 
             if (!student) {
-                throw createError(`Student with ID ${studentData.studentId} not found`, 400)
+                return next(createError(`Student with ID ${studentData.studentId} not found` , 400))
             }
+
+            const alreadyAssigned = parent.studentsEnrolled?.filter((s) => s && s.studentId).some((s) => s.studentId.toString() === studentData.studentId)
+
+            if (alreadyAssigned) {
+                return next(createError(`Student with ID ${studentData.studentId} is already added as parent child` , 400))
+            }            
       
             student.parentId = parent._id
 
             await student.save()
       
             return {
-                studentId: student._id,
+                studentId: studentData.studentId,
                 fullName: studentData.fullName,
-                relation: studentData.relation,
-                gradeLevel: studentData.gradeLevel,
+                educationLevel: studentData.educationLevel,
+                relation: {
+                  role: studentData.relation.role,
+                  emergencyNumber: studentData.relation.emergencyNumber, 
+                  emergencyEmail: studentData.relation.emergencyEmail,
+                },
             }
 
           })
@@ -221,12 +238,48 @@ const assignStudentsToParent = async (req , res , next) => {
 
 
 
+const getChildInfo = async (req , res , next) => {
+
+    try {
+        
+        const {childId} = req.params
+
+        const parent = await Parent.findOne({userObjRef : req.user._id})
+
+        if (!parent) {
+          return next(createError(`Parent not found` , 400))
+        }
+
+        const student = await Student.findOne({userObjRef : childId}).populate("userObjRef")
+        
+        if (!student) {
+            return next(createError(`Student not found` , 400))
+        }
+
+        const userObj = student.userObjRef.toObject()
+
+        const { cartItems , ...rest } = userObj
+
+        const existChild = parent.studentsEnrolled.find(student => student.studentId.toString() === childId)
+
+        res.status(200).json({ child: rest , existChild })
+
+    } catch (error) {
+        next(error)        
+    }
+
+}
+
+
+
+
 
 module.exports = {
     getMyStudents , 
     getSpecificStudentLog , 
     getParentStudentsCourses , 
-    assignStudentsToParent
+    assignStudentsToParent ,
+    getChildInfo
 }
 
 

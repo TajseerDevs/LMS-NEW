@@ -7,7 +7,7 @@ import purpleAssigment from "../../assets/purple-assigment.svg"
 import { useParams } from "react-router-dom"
 import { useSelector } from "react-redux"
 import { useGetCourseByIdQuery } from "../../store/apis/courseApis"
-import { useGetSingleStudentUserQuery } from "../../store/apis/instructorApis"
+import { useGetSingleStudentUserQuery, useGetTwoRandomUngradedSubmissionsQuery } from "../../store/apis/instructorApis"
 import { useAddMarksToSubmissionMutation, useGetAllStudentAssignmentsSubmissionsQuery } from "../../store/apis/assigmentApis"
 import formatDate from "../../utils/formatDate"
 
@@ -33,7 +33,9 @@ const StudentAssigmentsSubmissions = () => {
 
   const {data : course } = useGetCourseByIdQuery({token , courseId})
   const {data : student} = useGetSingleStudentUserQuery({token , userId : studentId})  
-  const {data : studentAssignmentsSubmissions , refetch} = useGetAllStudentAssignmentsSubmissionsQuery({token , userId : studentId , courseId , page})  
+  const {data : studentAssignmentsSubmissions , refetch} = useGetAllStudentAssignmentsSubmissionsQuery({token , userId : studentId , courseId , page})
+  const {refetch : refetchRandomUnGraded } = useGetTwoRandomUngradedSubmissionsQuery({token})
+  
 
   const [assignMarkToSubmission , {isLoading : isLoadingAddMark}] = useAddMarksToSubmissionMutation()
   
@@ -60,6 +62,7 @@ const StudentAssigmentsSubmissions = () => {
     try {
       await assignMarkToSubmission({token , assignmentId , userId : student?._id , marks : tempMark , feedback : tempMark > 5 ? "Very Good" : "Not Bad"}).unwrap()
       await refetch()
+      await refetchRandomUnGraded()
     } catch (error) {
       console.log(error)
     }finally{
@@ -198,7 +201,7 @@ const StudentAssigmentsSubmissions = () => {
                 <td className="p-4">
 
                 {editingId === submission?._id ? (
-
+  
                     <div className="">
 
                       <input

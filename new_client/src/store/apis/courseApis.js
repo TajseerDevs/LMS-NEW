@@ -128,6 +128,13 @@ const coursesApi = createApi({
           headers: { Authorization: `Bearer ${token}` },
         }),
       }),
+      searchCoursesByTitle: builder.query({
+        query: ({token , title }) => ({
+          url: `/courses/search-courses/by-title?title=${title}`,
+          method: "GET",
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      }),
     }),
   });
 
@@ -151,7 +158,8 @@ const {
   useChangeItemNameMutation ,
   useIncrementSectionViewMutation ,
   useDeleteAttachmentMutation ,
-  useIncrementAttachmentViewMutation
+  useIncrementAttachmentViewMutation ,
+  useSearchCoursesByTitleQuery
 } = coursesApi
 
 
@@ -174,5 +182,6 @@ export {
   useIncrementSectionViewMutation ,
   useDeleteAttachmentMutation ,
   useIncrementAttachmentViewMutation ,
+  useSearchCoursesByTitleQuery ,
   coursesApi ,
 }

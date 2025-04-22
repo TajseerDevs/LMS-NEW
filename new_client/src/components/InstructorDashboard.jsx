@@ -198,15 +198,15 @@ const InstructorDashboard = () => {
 
                     {[1, 2, 3, 4, 5].map((day) => (
 
-                    <div
-                        key={day}
-                        className={`relative p-4 h-52 border rounded-lg flex items-start justify-center ${
-                        day === 1 ? "bg-gray-200" : "bg-white"
-                     }`}
-                    >
-                        <span className="text-lg font-bold text-gray-700">{day}</span>
+                        <div
+                            key={day}
+                            className={`relative p-4 h-52 border rounded-lg flex items-start justify-center ${
+                            day === 1 ? "bg-gray-200" : "bg-white"
+                        }`}
+                        >
+                            <span className="text-lg font-bold text-gray-700">{day}</span>
 
-                    </div>
+                        </div>
 
                     ))}
 
@@ -221,25 +221,43 @@ const InstructorDashboard = () => {
                     <button className="text-[#4036851] flex items-center gap-2 font-semibold text-lg">View All <FaAngleRight/></button>
                 </div>
 
-                <div className="mt-4 space-y-3">
+                <div className="mt-8 space-y-3">
 
-                    {randomStudentsSubmissions?.map((assignment) => (
+                {randomStudentsSubmissions?.length > 0 ? (
 
-                    <div key={assignment} className="flex items-center p-3 rounded-lg">
+                    randomStudentsSubmissions?.map((assignment) => (
 
-                        <div className="w-10 h-10 bg-yellow-300 rounded-lg mr-3"></div>
+                        <div key={assignment?._id} className="flex items-center p-3 rounded-lg">
 
-                        <div>
-                            <p className="font-medium capitalize">{assignment?.assignmentTitle}</p>
-                            <p className="text-sm text-gray-500">Student Name : {assignment?.studentName}</p>
+                            <div className="w-10 h-10 bg-yellow-300 rounded-lg mr-3"></div>
+
+                            <div>
+
+                                <p className="font-medium capitalize">{assignment?.assignmentTitle}</p>
+
+                                <p className="text-sm text-gray-500">
+                                    Student Name : {assignment?.studentName}
+                                </p>
+
+                            </div>
+
+                            <p className="ml-auto mr-5 text-gray-500 text-sm">
+                                Deadline : {formatDate(assignment?.dueDate)}
+                            </p>
+
+                            <YellowBtn
+                                onClick={() => navigate(`/instructor/assigment/${assignment?.studentId}/${assignment?.courseId}/student`)}
+                                text="Grade"
+                            />
+
                         </div>
-                        
-                        <p className="ml-auto mr-5 text-gray-500 text-sm">Deadline : {formatDate(assignment?.dueDate)}</p>
-                        <YellowBtn onClick={() => navigate(`/instructor/assigment/757575858/12312411/student`)} text="Grade"/>
 
-                    </div>
-
-                    ))}
+                    ))
+                        ) : (
+                        <p className="text-center text-lg text-gray-500 mt-8">
+                            No student submissions available.
+                        </p>
+                    )}
 
                 </div>
 

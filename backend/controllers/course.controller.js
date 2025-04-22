@@ -648,88 +648,102 @@ const changeSectionName = async (req, res, next) => {
 
 const changeItemName = async (req, res, next) => {
 
-  const { courseId, sectionId, itemId } = req.params;
-  const { name } = req.body;
+  const { courseId, sectionId, itemId } = req.params
+  const { name } = req.body
 
   try {
-    const course = await Course.findById(courseId);
 
-    if (!course) return res.status(404).json({ error: "Course not found" });
+    const course = await Course.findById(courseId)
 
-    const section = course.sections.id(sectionId);
+    if (!course) return res.status(404).json({ error: "Course not found" })
 
-    if (!section) return res.status(404).json({ error: "Section not found" });
+    const section = course.sections.id(sectionId)
 
-    const item = section.items.id(itemId);
+    if (!section) return res.status(404).json({ error: "Section not found" })
 
-    if (!item) return res.status(404).json({ error: "Item not found" });
+    const item = section.items.id(itemId)
 
-    item.name = name;
+    if (!item) return res.status(404).json({ error: "Item not found" })
 
-    await course.save();
+    item.name = name
 
-    res.status(200).json(item);
+    await course.save()
+
+    res.status(200).json(item)
+
   } catch (error) {
     console.error("Error updating item name:", error);
     res.status(500).json({ error: "Failed to update item name" });
   }
-};
+
+}
+
+
+
 
 const searchCoursesByTitle = async (req, res, next) => {
 
   const searchCoursesSchema = Joi.object({
     title: Joi.string().trim().allow("").optional(),
     page: Joi.number().integer().min(1).default(1),
-  });
+  })
 
-  const { error, value } = searchCoursesSchema.validate(req.query);
+  const { error , value } = searchCoursesSchema.validate(req.query)
 
   if (error) {
-    return next(createError(error.details[0].message, 400));
+    return next(createError(error.details[0].message, 400))
   }
 
   try {
-    const limit = 10;
 
-    const { title, page } = value;
+    const limit = 10
 
-    const skip = (page - 1) * limit;
+    const { title, page } = value
+
+    const skip = (page - 1) * limit
+
+    const userId = req.user._id
+
+    const studentUserDoc = await Student.findOne({ userObjRef: userId });
 
     const titleQuery = title ? String(title) : "";
 
     const courses = await Course.find({
+      studentsEnrolled: { $nin: [studentUserDoc._id] } ,
       title: { $regex: titleQuery, $options: "i" },
     })
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .populate({
-        path: "instructorId",
-        select: "-coursesTeaching",
-        populate: { path: "userObjRef", select: "name email profilePic " },
-      });
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit)
+    .populate({
+      path: "instructorId",
+      select: "-coursesTeaching",
+      populate: { path: "userObjRef", select: "firstName lastName email profilePic " },
+    })
 
     const totalCourses = await Course.countDocuments({
       title: { $regex: title, $options: "i" },
-    });
+    })
 
     res.status(200).json({
       courses,
       totalCourses,
       currentPage: page,
       totalPages: Math.ceil(totalCourses / limit),
-    });
+    })
+
   } catch (error) {
-    next(error);
+    next(error)
   }
-};
+
+}
 
 
 
 
 const searchCoursesByInstructor = async (req, res, next) => {
 
-  const { instructorName } = req.query;
+  const { instructorName } = req.query
 
   try {
     const courses = await Course.aggregate([
@@ -773,13 +787,15 @@ const searchCoursesByInstructor = async (req, res, next) => {
           "instructorDetails.userObjRef": 0,
         },
       },
-    ]);
+    ])
 
-    res.status(200).json({ courses });
+    res.status(200).json({ courses })
+  
   } catch (error) {
-    next(error);
+    next(error)
   }
-};
+
+}
 
 
 

@@ -24,6 +24,29 @@ const Quiz = require("../models/Quiz")
 
 
 
+const getInstructorProfile = async (req , res , next) => {
+
+  try {
+    
+    const userId = req.user._id
+
+    const instructor = await Instructor.findOne({userObjRef : userId})
+
+    if (!instructor) return next(createError("Instructor not found", 404))
+
+    const userDocObj = await User.findById(userId)
+
+    if (!userDocObj) return next(createError("User not found", 404))
+
+    res.status(200).json(userDocObj)
+
+  } catch (error) {
+    next(error)
+  }
+
+}
+
+
 const getInstructorInsights = async (req , res , next) => {
 
   try {
@@ -275,6 +298,10 @@ const getTwoRandomUngradedSubmissions = async (req , res , next) => {
       assignmentTitle: sub.assignmentId.title,
       studentName: `${sub.studentId.userObjRef.firstName} ${sub.studentId.userObjRef.lastName}` ,
       dueDate: sub.assignmentId.dueDate,
+      assignmentId : sub.assignmentId._id ,
+      studentId : sub.studentId.userObjRef._id ,
+      courseId : sub.assignmentId.courseId._id ,
+
     }))
 
     res.status(200).json(result)
@@ -1427,36 +1454,53 @@ const updateCourse = async (req , res , next) => {
 
 
 
-const getInstructorContentTickets = async (req, res, next) => {
+const getInstructorContentTickets = async (req , res , next) => {
 
-    try {
-        
-      const loggedUserId = req.user._id
+  try {
     
-      const instructor = await Instructor.findOne({userObjRef : loggedUserId})
+    const page = Number(req.query.page) || 1
+    const limit = 10
+    const skip = (page - 1) * limit
 
-      if(!instructor){
-        return next(createError("instructor not found" , 404))
-      }
+    const loggedUserId = req.user._id
+    
+    const instructor = await Instructor.findOne({userObjRef : loggedUserId})
 
-      const ownedCourses = await Course.find({ instructorId : instructor._id , status : "approved" }).select("_id")
-  
-      const courseIds = ownedCourses.map((course) => course._id)
-  
-      const contentTickets = await Ticket.find({
-        regarding: "content",
-        courseRef: { $in: courseIds }, 
-      })
-        .populate("courseRef", "title") 
-        .populate("userObjRef", "name email")
-  
-      res.status(200).json(contentTickets)
-      
-    } catch (error) {
-      next(error)
+    if(!instructor){
+      return next(createError("instructor not found" , 404))
     }
 
+    const ownedCourses = await Course.find({ instructorId : instructor._id , status : "approved" }).select("_id")
+  
+    const courseIds = ownedCourses.map((course) => course._id)
+
+    const totalTickets = await Ticket.countDocuments({
+      regarding: "content",
+      courseRef: { $in: courseIds },
+    })
+  
+    const contentTickets = await Ticket.find({
+      regarding: "content",
+      courseRef: { $in: courseIds }, 
+    })
+    .populate("courseRef", "title") 
+    .populate("userObjRef", "name email")
+    .skip(skip)
+    .limit(limit)
+    .sort({ createdAt: -1 })
+  
+    res.status(200).json({
+      totalTickets,
+      currentPage: page,
+      totalPages: Math.ceil(totalTickets / limit),
+      tickets: contentTickets,
+    })
+
+  } catch (error) {
+    next(error)
   }
+
+}
 
 
 
@@ -1494,7 +1538,7 @@ const getDeclineReason = async (req , res , next) => {
         next(error)    
     }
 
-  }
+}
 
 
 
@@ -1545,6 +1589,7 @@ const getCourseStudentLogs = async (req , res , next) => {
 
 
 module.exports = {
+    getInstructorProfile ,
     getInstructorInsights ,
     getInstructorUngradedSubmissions ,
     getRandomInstructorCourses ,

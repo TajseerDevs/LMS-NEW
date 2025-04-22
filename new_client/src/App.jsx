@@ -21,8 +21,8 @@ import Dashboard from './components/Dashboard'
 import MyLearning from './pages/courses/MyLearning'
 
 import ProtectedRoute from './components/ProtectedRoute'
-import AdminProtectedRoute from './components/AdminProtectedRoute'
 import InstructorProtectedRoute from './components/InstructorProtectedRoute'
+import AdminProtectedRoute from './components/AdminProtectedRoute'
 
 import useSocket from './hooks/useSocket'
 import { SocketProvider } from './context/SocketContext'
@@ -71,12 +71,26 @@ import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import StudentGrades from './pages/grades/StudentGrades'
 
+import ParentProtectedRoute from './components/ParentProtectedRoute'
+import Childs from './pages/parent/Childs'
+import ChildSubmissions from './pages/parent/ChildSubmissions'
+import AddNewChild from './pages/parent/AddNewChild'
+import ChildProfile from './pages/parent/ChildProfile'
+import ChildrenCourses from './pages/parent/ChildrenCourses'
+import ChildrenSingleCourse from './pages/parent/ChildrenSingleCourse'
+import ChildrensQuizzesGrades from './pages/parent/ChildrensQuizzesGrades'
+import ChildrenCourseGrades from './pages/parent/ChildrenCourseGrades'
+import ChildrenSingleCourseGrades from './pages/parent/ChildrenSingleCourseGrades'
+import PaymentAndFees from './pages/parent/PaymentAndFees'
+
 
 
 
 function App() {
 
   const user = useSelector((state) => state.user)
+  const darkMode = useSelector((state) => state.darkTheme.darkMode)
+
   const dispatch = useDispatch()
 
   const socket = useSocket()
@@ -101,12 +115,13 @@ function App() {
 
     }
 
-  }, [socket])
+  } , [socket])
   
 
 
+
   useEffect(() => {
-    
+  
     if(user){
       socket.emit("addUser" , user?.user?._id)
     }
@@ -116,6 +131,17 @@ function App() {
     }
   
   }, [user])
+
+
+
+
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark')
+    } else {
+      document.documentElement.classList.remove('dark') 
+    }
+  }, [darkMode])
 
 
   
@@ -243,8 +269,25 @@ function App() {
 
               <Route path="profile" element={<Profile/>} />
 
-            </Route>  
+            </Route>
 
+
+            <Route path="/parent" element={<ParentProtectedRoute> <Layout  /> </ParentProtectedRoute>}>
+
+              <Route path="children" element={<Childs />} />
+              <Route path="add-child" element={<AddNewChild />} />
+              <Route path="children/submissions/:childId" element={<ChildSubmissions />} />
+              <Route path="children/profile/:childId" element={<ChildProfile />} />
+              <Route path="children/courses" element={<ChildrenCourses />} />
+              <Route path="children/course/:courseId" element={<ChildrenSingleCourse />} />
+              <Route path="children/quizzes/grdaes" element={<ChildrensQuizzesGrades />} />
+              <Route path="children/course/grdaes/:childId" element={<ChildrenCourseGrades />} />
+              <Route path="children/course/grdaes/:childId/:courseId" element={<ChildrenSingleCourseGrades />} />
+              <Route path="payment/fees" element={<PaymentAndFees />} />
+
+
+            </Route>  
+ 
           </Routes>
 
           <ToastContainer/>

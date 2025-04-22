@@ -1,6 +1,6 @@
 const express = require("express")
 const { protectRoutes } = require("../middlewares/auth")
-const { getMyStudents, getSpecificStudentLog, getParentStudentsCourses, assignStudentsToParent } = require("../controllers/parent.controller")
+const { getMyStudents, getSpecificStudentLog, getParentStudentsCourses, assignStudentsToParent, getChildInfo } = require("../controllers/parent.controller")
 
 
 
@@ -14,6 +14,9 @@ router.get('/students/courses/:studentId' , protectRoutes , getParentStudentsCou
 router.get('/students/:studentId/logs/:attachmentId' , protectRoutes , getSpecificStudentLog)
 
 router.post("/assign-students" , protectRoutes , assignStudentsToParent)
+
+router.get("/child/:childId" , protectRoutes , getChildInfo)
+
 
 
 module.exports = router

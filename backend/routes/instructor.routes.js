@@ -22,12 +22,15 @@ const {
      getRandomInstructorCourses,
      getRandomStudentsWithCompletion,
      getTwoRandomUngradedSubmissions,
-     getCourseStudentDetails
+     getCourseStudentDetails,
+     getInstructorProfile
 } = require("../controllers/instructor.controller")
 
 
 const router = express.Router()
 
+
+router.get('/profile' , protectRoutes , getInstructorProfile)
 
 router.get('/insights' , protectRoutes , getInstructorInsights)
 

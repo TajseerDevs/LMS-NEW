@@ -22,7 +22,8 @@ import { quizApi } from "./apis/quizApis";
 import { quizSlice } from "./slices/quizSlice";
 import { assigmentApi } from "./apis/assigmentApis";
 import { certificateApi } from "./apis/certificateApis";
-
+import { themeSlice } from "./slices/themeSlice";
+import { parentApi } from "./apis/parentApis";
 
 const store = configureStore({
     reducer:{
@@ -32,9 +33,11 @@ const store = configureStore({
         instructor : instructorSlice.reducer,
         ticket : ticketSlice.reducer,
         quiz : quizSlice.reducer,
+        darkTheme : themeSlice.reducer,
         [authApi.reducerPath]: authApi.reducer, 
         [assigmentApi.reducerPath]: assigmentApi.reducer, 
         [adminApi.reducerPath]: adminApi.reducer, 
+        [parentApi.reducerPath]: parentApi.reducer, 
         [coursesApi.reducerPath]: coursesApi.reducer, 
         [studentApi.reducerPath]: studentApi.reducer, 
         [instructorApi.reducerPath]: instructorApi.reducer, 
@@ -56,6 +59,7 @@ const store = configureStore({
             .concat(instructorApi.middleware)
             .concat(notificationApi.middleware)
             .concat(paymentApi.middleware)
+            .concat(parentApi.middleware)
             .concat(scormApi.middleware)
             .concat(cartApi.middleware)
             .concat(ticketsApi.middleware)

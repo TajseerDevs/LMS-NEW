@@ -156,6 +156,20 @@ const instructorApi = createApi({
           headers: { Authorization: `Bearer ${token}` } ,
         }),
       }), 
+      getInstructorContentTickets : builder.query({
+        query: ({token , page}) => ({
+          url: `/instructor/tickets/content?page=${page}`,
+          method: "GET",
+          headers: { Authorization: `Bearer ${token}` } ,
+        }),
+      }), 
+      getInstructorProfile : builder.query({
+        query: ({token}) => ({
+          url: `/instructor/profile`,
+          method: "GET",
+          headers: { Authorization: `Bearer ${token}` } ,
+        }),
+      }), 
     }),
   })
 
@@ -179,7 +193,9 @@ const instructorApi = createApi({
     useGetRandomStudentsWithCompletionQuery ,
     useGetTwoRandomUngradedSubmissionsQuery ,
     useGetCourseStudentDetailsQuery ,
-    useGetSingleStudentUserQuery
+    useGetSingleStudentUserQuery ,
+    useGetInstructorContentTicketsQuery ,
+    useGetInstructorProfileQuery
   } = instructorApi
 
 
@@ -202,5 +218,7 @@ const instructorApi = createApi({
     useGetTwoRandomUngradedSubmissionsQuery ,
     useGetCourseStudentDetailsQuery ,
     useGetSingleStudentUserQuery ,
+    useGetInstructorContentTicketsQuery ,
+    useGetInstructorProfileQuery , 
     instructorApi ,
   }
