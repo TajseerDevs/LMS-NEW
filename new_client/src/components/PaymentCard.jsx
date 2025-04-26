@@ -20,7 +20,7 @@ const PaymentCard = ({ title , amountText , buttonText , nextPaymentText }) => {
 
           {buttonText && (
             <div className='mb-3 mt-3'>
-                <YellowBtn text={buttonText}/>
+              <YellowBtn text={buttonText}/>
             </div>
           )}
 

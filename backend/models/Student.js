@@ -58,7 +58,7 @@ const StudentSchema = new mongoose.Schema({
         timestamp: { type: Date },       
       },
     },
-  ],
+  ], 
 } , {
   toObject : {virtuals : true} ,
   toJSON : {virtuals : true} ,

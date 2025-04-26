@@ -25,7 +25,7 @@ router.post("/register" , register)
 
 router.post("/login" , login)
 
-router.patch("/update-profile" , protectRoutes , updateProfile)
+router.patch("/update-profile" , protectRoutes , updateProfile) // only text inputs (without profile image)
 
 router.get("/", protectRoutes, getLoggedUser)
 
@@ -33,9 +33,9 @@ router.patch("/upload-profile-pic" , protectRoutes , uploadProfileImg)
 
 router.delete("/delete-profile-pic" , protectRoutes , deleteProfileImg)
 
-router.post("/upload-documents" , protectRoutes , uploadDocuments)
+router.post("/upload-documents" , protectRoutes , uploadDocuments) // to upload documents types in general for the student
 
-router.post("/upload-voice" , protectRoutes , uploadVoice)
+router.post("/upload-voice" , protectRoutes , uploadVoice) // ! TODO convert it to mime type check
 
 router.post("/forgot-password", forgotPassword)
 

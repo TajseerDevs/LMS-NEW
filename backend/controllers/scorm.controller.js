@@ -79,7 +79,7 @@ const Lesson = require("../models/ScormLogSchema");
           interactions,
           attachement: attachmentId,
           courseId : attachementCourse._id ,
-          completionPercentage : contentCmi?.completionPercentage || 0
+          completionPercentage : contentCmi?.completionPercentage || 0 // for video items type
         }
     
         if (lesson) {

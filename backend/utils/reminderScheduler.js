@@ -27,9 +27,11 @@ const scheduleReminder = (reminder) => {
   let reminderDate = new Date(reminder.reminderDateTime)
 
   if (reminder.reminderType === 'once') {
+    
     schedule.scheduleJob(reminderDate, () => {
       createReminderNotification(reminder);
     })
+
   } else if (reminder.reminderType === 'daily') {
     const timeParts = reminder.reminderTime.split(' ');
     const [hour, minute] = timeParts[0].split(':');

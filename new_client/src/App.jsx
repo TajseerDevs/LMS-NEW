@@ -63,7 +63,7 @@ import EnrolledCourses from './pages/courses/EnrolledCourses'
 import { useGetCartItemsQuery } from './store/apis/cartApis'
 import { setCartItems } from './store/slices/cartSlice'
 import PurchaseSucces from './pages/purchase/PurchaseSucces'
-import QuizDetails from './pages/quiz/QuizDetails'
+import QuizDetails from './pages/quiz/QuizDetails' 
 import QuizSubmission from './pages/quiz/QuizSubmission'
 import QuizResult from './pages/quiz/QuizResult'
 

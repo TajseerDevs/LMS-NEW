@@ -39,8 +39,8 @@ const getAllStudentCourses = async (req, res, next) => {
       select: "-paymentCourses -studentsEnrolled",
       populate: {
         path: "instructorId",
-        select: "name email",
-        populate: { path: "userObjRef", select: "name email profilePic" },
+        select: "firstName lastName email",
+        populate: { path: "userObjRef", select: "firstName lastName email profilePic" },
       },
     });
 
@@ -400,7 +400,9 @@ const checkEnrollmentStatus = async (req, res, next) => {
 
 
 const addCourseRating = async (req, res, next) => {
+
   try {
+
     const { courseId } = req.params;
     const { rating } = req.body;
 
@@ -898,7 +900,7 @@ const addToWishlist = async (req, res, next) => {
     if (!course) return next(createError("Course does not exist", 404))
 
     if (user.wishlist.includes(courseId)) {
-      return next(createError("Course is already bookmarked", 409))
+      return next(createError("Course is already in your whishlist", 409))
     }
 
     user.wishlist.push(courseId)
@@ -906,7 +908,7 @@ const addToWishlist = async (req, res, next) => {
     await user.save()
 
     res.status(200).json({
-      whishlist: user.whishlist,
+      whishlist: user.wishlist,
       message: "Course added to bookmarks",
     })
 
@@ -975,7 +977,7 @@ const getWishlist = async (req, res, next) => {
           path: "instructorId",
           populate: {
             path: "userObjRef",
-            select: "name email profilePic",
+            select: "firstName lastName email profilePic",
           },
           select: "title instructorId",
         },
@@ -1413,13 +1415,12 @@ const getStudentGrades = async (req , res , next) => {
       return next(createError("Student not exist" , 404))
     }
 
-
     const quizResults = await QuizResult.find({ studentId : studentDocObj._id })
     .populate("courseId", "title")
     .populate("quizId", "title")
     .sort({ createdAt: 1 })
 
-    const submissions = await Submission.find({ studentId : studentDocObj._id , isGraded : true })
+    const submissions = await Submission.find({ studentId : studentDocObj._id , isGraded : true }) // the instructor has added a mark for this assignement submission file
     .populate({
       path: "assignmentId",
       select: "title mark courseId",

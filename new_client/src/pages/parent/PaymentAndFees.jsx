@@ -65,7 +65,7 @@ const PaymentAndFees = () => {
 
         <div>
 
-            <h3 className="text-3xl font-semibold mb-4 capitalize p-6 text-[#002147]">Child Learning Fee</h3>
+          <h3 className="text-3xl font-semibold mb-4 capitalize p-6 text-[#002147]">Child Learning Fee</h3>
             
         </div>
 

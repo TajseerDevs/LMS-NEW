@@ -122,30 +122,6 @@ const register = async (req , res , next) => {
         userObjRef: newUser._id,
       })
 
-      // const studentsEnrolled = await Promise.all(students.map(async (studentData) => {
-
-      //     const student = await Student.findById(studentData.studentId)
-    
-      //     if (!student) {
-      //       return next(createError(`Student with ID ${studentData.studentId} not found` , 400))
-      //     }
-
-      //     student.parentId = newParent._id
-      //     await student.save()
-    
-      //     return {
-      //       studentId: student._id,
-      //       fullName: studentData.fullName,
-      //       relation: studentData.relation,
-      //       gradeLevel: studentData.gradeLevel,
-      //     }
-
-      //   })
-
-      // )
-
-      // newParent.studentsEnrolled = studentsEnrolled
-
       await newParent.save()
 
     }
@@ -538,7 +514,7 @@ const uploadVoice = async (req , res , next) => {
     const uploadedFile = req.files.file 
 
     const allowedExtensions = /mp3|wav|ogg/
-    const fileExtension = path.extname(uploadedFile.name).toLowerCase()
+    const fileExtension = path.extname(uploadedFile.name).toLowerCase() 
 
     if (!allowedExtensions.test(fileExtension)) {
       return next(createError("Unsupported voice file type.", 400))
