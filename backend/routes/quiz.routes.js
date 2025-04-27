@@ -61,9 +61,9 @@ router.get('/course/quizzes/:courseId' , protectRoutes ,  getAllQuizzes)
 
 router.get('/instructor/quizzes' , protectRoutes , getAllInstructorQuizzes)
 
-router.put('/course/:courseId/quizzes/:quizId' , protectRoutes , updateQuiz)
+router.put('/course/:courseId/quizzes/:quizId' , protectRoutes , updateQuiz) // ! TODO needs update to match new version
 
-router.put('/course/:courseId/quizzes/:quizId/questions/:questionId' , protectRoutes , updateQuizQuestion)
+router.put('/course/:courseId/quizzes/:quizId/questions/:questionId' , protectRoutes , updateQuizQuestion) // ! TODO needs update to match new version
 
 
 

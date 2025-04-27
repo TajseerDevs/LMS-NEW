@@ -1695,7 +1695,7 @@ const addReminder = async (req, res, next) => {
       reminderType,
       reminderDays,
       reminderTime,
-      reminderDateTime: reminderType === 'once' ? normalizedReminderDateTime : undefined,
+      reminderDateTime: reminderType === 'once' ? normalizedReminderDateTime : undefined ,
     })
 
     await reminder.save()

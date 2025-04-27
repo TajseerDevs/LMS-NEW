@@ -20,7 +20,7 @@ const attachmentSchema = new Schema({
     enum: ['Video', 'Image' , "Activity" , "Document"],
     required: true
   },
-  trackingInfo: [{ type: mongoose.Schema.Types.ObjectId , ref: "trackings" }],
+  trackingInfo: [{ type: mongoose.Schema.Types.ObjectId , ref: "trackings" }] , // deprecated
   scormLog : { type: mongoose.Schema.Types.ObjectId , ref: "Lesson" } ,
   courseId : { type: mongoose.Schema.Types.ObjectId , ref: "courses" } ,
   fileId : { type: mongoose.Schema.Types.ObjectId , ref: "files" } ,

@@ -145,7 +145,7 @@ router.put("/notes/:courseId/notes/:noteId" , protectRoutes , updateNote)
 router.delete("/notes/:courseId/notes/:noteId" , protectRoutes , deleteNote)
 
 router.get("/notes/export-pdf/:courseId" , protectRoutes , exportPdfNotes)
-
+    
 
 router.post("/set-last-progress" , protectRoutes , setCourseLastProgress)
 

@@ -912,7 +912,7 @@ const submitQuizAnswers = async (req , res , next) => {
           break
 
           case "fill_in_blank":
-
+            // ! TODO add white space trim checker
             const correctAnswers = question.options.filter(opt => opt.isCorrect).map(opt => opt.optionText)
             
             const pointPerCorrect = question.points / correctAnswers.length
@@ -1007,7 +1007,6 @@ const submitQuizAnswers = async (req , res , next) => {
     const percentage = ((totalScore / maxScore) * 100).toFixed(2)
     const passStatus = totalScore >= passScore ? "Passed" : "Failed"
 
-
     const quizResult = new QuizResult({
       studentId : studentDoc._id ,
       quizId,
@@ -1029,7 +1028,6 @@ const submitQuizAnswers = async (req , res , next) => {
     
     await quiz.save()
 
-
     res.status(200).json({
       quizId,
       totalScore: totalScore.toFixed(2),
@@ -1042,7 +1040,6 @@ const submitQuizAnswers = async (req , res , next) => {
       incorrectAnswersCount,
       spentTime: `${spentMinutes}m ${spentSeconds}s`
     })
-
 
   } catch (error) {
     console.error("Error in quiz submission:", error)
@@ -1123,7 +1120,7 @@ const checkQuizSubmission =  async (req  , res , next) => {
 
 
 
-// 
+// old version
 const submitAnswers = async (req , res , next) => {
 
     try {
@@ -1302,7 +1299,7 @@ const submitAnswers = async (req , res , next) => {
 
 
 
-
+// old version
 const getStudentResults = async (req , res , next) => {
 
   try {

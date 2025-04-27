@@ -1107,8 +1107,6 @@ const uploadScormFile = async (req, res, next) => {
       const section = course.sections.id(sectionId)
 
       if (!section) return next(createError("Section with this id not found", 404));
-  
-  
 
       if (!item) return next(createError("Item with this id not found", 404))
 
@@ -1512,13 +1510,13 @@ const getDeclineReason = async (req , res , next) => {
     try {
 
         if(req.user.role !== "instructor" && req.user.role !== "admin"){
-            return next(createError("you are not authorized to view the decline reason" , 401))            
+          return next(createError("you are not authorized to view the decline reason" , 401))            
         }
         
         const course = await Course.findById(courseId)
 
         if (!course) {
-            return next(createError("Course not found", 404))
+          return next(createError("Course not found", 404))
         }
 
         if(req.user.role === "instructor"){
